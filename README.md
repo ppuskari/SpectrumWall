@@ -62,10 +62,27 @@ Press **[** and **]** to change the count in increments of 16, or **B** to cycle
 - **T** — toggle fading LED afterglow trails
 - **R** — toggle reflected light below the frequency bars
 - **P** — toggle bass-reactive drifting particles
+- **M** — toggle center-monitor stereo mirror (default on: bass from both channels meets at the middle)
 - **[ / ]** — decrease / increase active spectrum bars by 16, clamped to 64–256
 - **B** — cycle through 64, 96, 128, 192 and 256-band presets
 
 The application prints available audio endpoints and the currently selected source to the console. An eventual in-app control panel and persistent monitor mapping are tracked for future releases.
+
+## Center-monitor stereo symmetry
+
+By default, the **left half of the center screen is mirrored horizontally**.
+The left channel is arranged high-to-low from the outside toward the center;
+the right channel remains low-to-high from the center toward the outside:
+
+`TREBLE ← LEFT CHANNEL ← BASS | BASS → RIGHT CHANNEL → TREBLE`
+
+Both low-frequency sections meet at the center divide. The two portrait displays retain
+their original low-to-high frequency orientation. This is **rendering-only**:
+FFT bins, stereo levels, waveforms, peak tracking, colors and optical recording remain
+unchanged. The left half's glow, reflections and animated peak indicators are mirrored
+with the bars, keeping all effects spatially aligned.
+
+Press **M** to switch between mirrored and original center layouts live.
 
 ## Eye-candy release
 
