@@ -44,3 +44,16 @@ if(WIN32 AND TARGET SDL3::SDL3-shared)
         COMMENT "Copying SDL3 runtime library"
     )
 endif()
+
+include(CTest)
+if(BUILD_TESTING)
+    add_executable(SpectrumWallBandTests
+        tests/spectrum_bands.cpp
+        src/SpectrumAnalyzer.cpp
+    )
+    target_include_directories(SpectrumWallBandTests PRIVATE src "${miniaudio_SOURCE_DIR}")
+    if(WIN32)
+        target_compile_definitions(SpectrumWallBandTests PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
+    endif()
+    add_test(NAME stereo-spectrum-band-count COMMAND SpectrumWallBandTests)
+endif()
