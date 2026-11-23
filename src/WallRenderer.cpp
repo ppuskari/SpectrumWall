@@ -234,9 +234,10 @@ void WallRenderer::drawPortrait(SDL_Renderer* r, float w, float h,
     const auto& peaks = left ? state.leftPeaks : state.rightPeaks;
     // Mirror only the right portrait's frequency axis; data remains unchanged.
     const bool mirror = portraitBandMirrored(left, rightPortraitMirror_);
-    drawSpectrum(r, {pad, h * 0.06f, w - 2 * pad, h * 0.75f},
+    drawSpectrumStyled(r, {pad, h * 0.06f, w - 2 * pad, h * 0.75f},
                  values, peaks, left ? afterglowLeft_ : afterglowRight_,
                  state.bandCount, theme, !left, mirror);
+    if (spectrumStyle_ != SpectrumStyle::Lines)
     drawReflections(r, {pad, h * 0.06f, w - 2 * pad, h * 0.75f},
                     values, state.bandCount, theme, !left, mirror);
     drawWave(r, {pad, h * 0.84f, w - 2 * pad, h * 0.07f},
@@ -254,14 +255,16 @@ void WallRenderer::drawCenter(SDL_Renderer* r, float w, float h,
     const float half = width * 0.495f;
     // Mirrored left half: treble at outer edge, bass at center.
     // The right half remains in normal bass-to-treble order.
-    drawSpectrum(r, {pad, h * 0.055f, half, h * 0.55f},
+    drawSpectrumStyled(r, {pad, h * 0.055f, half, h * 0.55f},
                  state.left, state.leftPeaks, afterglowLeft_,
                  state.bandCount, theme, false, centerMirror_);
+    if (spectrumStyle_ != SpectrumStyle::Lines)
     drawReflections(r, {pad, h * 0.055f, half, h * 0.55f},
                     state.left, state.bandCount, theme, false, centerMirror_);
-    drawSpectrum(r, {pad + width * 0.505f, h * 0.055f, half, h * 0.55f},
+    drawSpectrumStyled(r, {pad + width * 0.505f, h * 0.055f, half, h * 0.55f},
                  state.right, state.rightPeaks, afterglowRight_,
                  state.bandCount, theme, true);
+    if (spectrumStyle_ != SpectrumStyle::Lines)
     drawReflections(r, {pad + width * 0.505f, h * 0.055f, half, h * 0.55f},
                     state.right, state.bandCount, theme, true);
     line(r, w * 0.5f, h * 0.045f, w * 0.5f, h * 0.61f,
@@ -332,10 +335,10 @@ void WallRenderer::drawScreen(ScreenWindow& screen, const VisualState& state,
     SDL_SetRenderDrawColor(r, 192, 224, 232, 235);
     SDL_SetRenderScale(r, 2.0f, 2.0f);
     SDL_RenderDebugTextFormat(r, 8.0f, 8.0f,
-                              "%zu BANDS | %s | %s | GLOW %d | TRAILS %s",
-                              state.bandCount, paletteName(theme),
-                              smoothingModeName(smoothing), glowMode_,
-                              trailsEnabled_ ? "ON" : "OFF");
+                              "%zu BANDS | %s | %s | %s | GLOW %d | TRAILS %s",
+                              state.bandCount, spectrumStyleName(spectrumStyle_),
+                              paletteName(theme), smoothingModeName(smoothing),
+                              glowMode_, trailsEnabled_ ? "ON" : "OFF");
     if (screen.role == ScreenRole::Right)
         SDL_RenderDebugTextFormat(r, 8.0f, 18.0f, "RIGHT PORTRAIT MIRROR: %s",
                                   rightPortraitMirror_ ? "ON" : "OFF");
