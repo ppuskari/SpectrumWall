@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
+#include <cstring>
 
 namespace spectrum {
 namespace {
@@ -150,6 +151,73 @@ void drawProbe(SDL_Renderer* r, const ScreenWindow& screen,
         "%c B%zu %.0f-%.0f Hz  %.1f dBFS",
         right ? 'R' : 'L', bin, f0, f1, db);
 }
+
+void drawLevelMeterEngineering(SDL_Renderer* renderer,
+                               const ScreenWindow& screen,
+                               SDL_FRect plot, float w, float h,
+                               const VisualState& state,
+                               bool right, bool mirror) {
+    // The lower bars are full-band RMS, not per-frequency FFT buckets.
+    // Their linear X span is a calibrated -72..0 dBFS level scale.
+    constexpr std::array<int, 9> ticks = {
+        -72, -60, -48, -36, -24, -12, -6, -2, 0
+    };
+    constexpr SDL_Color tickColor{188, 217, 233, 220};
+    const float baseY = plot.y + plot.h;
+    for (int tick : ticks) {
+        const float fraction = levelMeterDbFraction(static_cast<float>(tick));
+        const float x = plot.x +
+            (mirror ? 1.0f - fraction : fraction) * plot.w;
+        engineeringLine(renderer, x, baseY, x, baseY + 5.0f, tickColor);
+
+        // Put a readable scale directly below both center-bottom meters.
+        char label[16]{};
+        std::snprintf(label, sizeof(label), "%d", tick);
+        const float textWidth = std::strlen(label) *
+                                8.0f * kEngineeringTextScale;
+        const float labelX = std::clamp(x - 0.5f * textWidth,
+            plot.x + 1.0f, plot.x + plot.w - textWidth - 1.0f);
+        SDL_SetRenderDrawColor(renderer, 218, 236, 248, 245);
+        renderEngText(renderer, labelX, baseY + 7.0f, label);
+    }
+
+    // Show the *instantaneous* block-RMS marker (cyan) in addition to the
+    // existing smoothed RMS fill and white sample-peak marker. This is an
+    // Audacity-style separation of current RMS vs peak measurements.
+    const float actualRms = right ? state.rmsRight : state.rmsLeft;
+    const float samplePeak = right ? state.peakRight : state.peakLeft;
+    const float rmsPosition = levelMeterSamplePeakFraction(actualRms);
+    const float rmsX = plot.x +
+        (mirror ? 1.0f - rmsPosition : rmsPosition) * plot.w;
+    engineeringLine(renderer, rmsX, plot.y - 4.0f,
+                    rmsX, plot.y + plot.h + 3.0f,
+                    {45, 246, 232, 240});
+
+    // The pointer interrogates a dB threshold, not a frequency bucket.
+    float mouseX = 0.0f, mouseY = 0.0f;
+    const SDL_FRect hoverArea = {
+        plot.x, plot.y - 4.0f, plot.w, plot.h + 13.0f
+    };
+    if (!mouseOverPlot(screen, hoverArea, w, h, mouseX, mouseY))
+        return;
+
+    const float fraction = std::clamp((mouseX - plot.x) / plot.w,
+                                      0.0f, 1.0f);
+    const float threshold = levelMeterDbAtFraction(
+        mirror ? 1.0f - fraction : fraction);
+    engineeringLine(renderer, mouseX, plot.y - 7.0f,
+                    mouseX, plot.y + plot.h + 8.0f,
+                    {255, 238, 160, 240});
+    const float captionY = h * 0.975f;
+    const float textX = plot.x + 6.0f;
+    engineeringRect(renderer,
+        {plot.x + 1.0f, captionY - 3.0f, plot.w - 2.0f, 19.0f},
+        {5, 16, 28, 235});
+    SDL_SetRenderDrawColor(renderer, 241, 245, 255, 255);
+    renderEngFormat(renderer, textX, captionY,
+        "%c THRESH %.1f  RMS %.1f  SAMPLE PEAK %.1f dBFS",
+        right ? 'R' : 'L', threshold, toDb(actualRms), toDb(samplePeak));
+}
 } // namespace
 
 void WallRenderer::drawEngineeringOverlay(const ScreenWindow& screen,
@@ -170,6 +238,20 @@ void WallRenderer::drawEngineeringOverlay(const ScreenWindow& screen,
                   h * 0.626f);
         drawProbe(r, screen, right, w, h, state, true, false,
                   h * 0.626f);
+        // Independent level axes below both center VU meters, matching the
+        // existing center-left mirror direction. No FFT frequency buckets here:
+        // the horizontal coordinate is overall level in dBFS.
+        const SDL_FRect meterLeft = {
+            pad, h * 0.927f, width * 0.485f, h * 0.025f
+        };
+        const SDL_FRect meterRight = {
+            pad + width * 0.515f, h * 0.927f,
+            width * 0.485f, h * 0.025f
+        };
+        drawLevelMeterEngineering(r, screen, meterLeft, w, h,
+                                  state, false, centerMirror_);
+        drawLevelMeterEngineering(r, screen, meterRight, w, h,
+                                  state, true, false);
         SDL_SetRenderDrawColor(r, 218, 235, 245, 210);
         renderEngText(r, w * 0.5f - 25.0f, h * 0.037f, "dBFS");
     } else {
