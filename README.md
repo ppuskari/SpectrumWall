@@ -34,6 +34,7 @@ Depending on your CMake/vcpkg generator, the executable may be under `build\src\
 - `--demo`: use synthetic stereo audio for visual testing.
 - `--fourth`: enable the optional second horizontal display if one exists.
 - `--windowed`: open movable bordered windows rather than borderless screen-filling displays.
+- `--visual led|lines|hybrid`: choose LED segments, smooth curves, or a layered combination (default `lines`).
 - `--palette N`: choose color scheme **1–8** (default 4, Prism Rainbow).
 - `--smoothing fast|balanced|liquid`: choose attack/release response (default balanced).
 
@@ -64,6 +65,7 @@ Press **[** and **]** to change the count in increments of 16, or **B** to cycle
 - **P** — toggle bass-reactive drifting particles
 - **M** — toggle center-monitor stereo mirror (default on: bass from both channels meets at the middle)
 - **H** — toggle right portrait monitor frequency mirroring (default on; left portrait unchanged)
+- **V** — cycle LED → Fluid Lines → Hybrid visual styles without restarting capture
 - **[ / ]** — decrease / increase active spectrum bars by 16, clamped to 64–256
 - **B** — cycle through 64, 96, 128, 192 and 256-band presets
 
@@ -90,6 +92,38 @@ Press **H** to independently toggle the right portrait's mirroring. Its bars, pe
 frequency gradients, reflections, and GPU bloom all follow the mirrored X positions.
 The left portrait, center stereo panels, waveforms, VU meters, and audio capture
 remain unchanged by **H**.
+
+## Fluid Lines / Peak Traces
+
+The default `--visual lines` display replaces the LED stacks with flowing spectral
+curves. The graph has three independently drawn envelopes:
+
+- **Live**: brightly colored, continuously interpolated line corresponding to
+  the current stereo FFT, with an energy-colored translucent fill below it.
+- **Peak hold**: pale, thin, lingering line above the live signal, representing
+  the existing per-frequency peak-hold state.
+- **Afterglow**: the former live envelope decays into a faint trailing curve
+  that makes transients and fades easier to follow.
+
+The Hermite interpolation stays between neighboring FFT values to avoid artificial
+overshoot. It smooths the *geometry* between displayed bands rather than claiming
+more FFT frequency resolution. The same channel-independent data and 64–256 band
+selection are retained. Vertical grids and gentle neon outlines evoke a classic
+oscilloscope and the retro-futuristic performance monitors of Task Manager OG
+(TMOG visuals are an aesthetic reference only; no external application code is used).
+
+`--visual hybrid` overlays the live and peak curves on the existing LED columns,
+while `--visual led` preserves the previous look. Press **V** at any time to cycle
+through them. Existing palettes (1–8), glow (G), smoothing (S), frequency softening
+(F), trails (T) and stereo mirror toggles (M, H) remain available.
+
+Example commands:
+
+```powershell
+.\\SpectrumWall.exe --bands 128 --palette 4 --visual lines
+.\\SpectrumWall.exe --bands 128 --palette 5 --visual hybrid --smoothing liquid
+.\\SpectrumWall.exe --visual led
+```
 
 ## Eye-candy release
 
