@@ -1,4 +1,5 @@
 #include "SpectrumAnalyzer.hpp"
+#include "EngineeringMath.hpp"
 #include "CurveSampling.hpp"
 #include "SpectrumLayout.hpp"
 #include "VisualStyle.hpp"
@@ -74,6 +75,27 @@ int main() {
         }
     }
 
+    // Log frequency axis endpoints, bucket center and dBFS mapping.
+    CHECK(std::abs(spectrumFrequencyFraction(30.0f)) < 1.0e-6f);
+    CHECK(std::abs(spectrumFrequencyFraction(18000.0f) - 1.0f) < 1.0e-6f);
+    CHECK(std::abs(spectrumFrequencyAtFraction(0.0f) - 30.0f) < 0.01f);
+    CHECK(std::abs(spectrumFrequencyAtFraction(1.0f) - 18000.0f) < 0.1f);
+    CHECK(std::abs(spectrumDbAtFraction(0.0f) + 72.0f) < 0.001f);
+    CHECK(std::abs(spectrumDbAtFraction(1.0f) + 2.0f) < 0.001f);
+    CHECK(std::abs(spectrumDbFraction(-37.0f) - 0.5f) < 0.001f);
+    CHECK(spectrumBandCenterHz(0, 128) >= 30.0f);
+    CHECK(spectrumBandCenterHz(127, 128) <= 18000.0f);
+
+    // Silence is centered; equal RMS is balanced; positive bias is R.
+    CHECK(stereoBalanceDb(0.0f, 0.0f) == 0.0f);
+    CHECK(stereoBalanceDb(0.00001f, 0.00002f) == 0.0f);
+    CHECK(std::abs(stereoBalanceDb(0.5f, 0.5f)) < 0.001f);
+    CHECK(std::abs(stereoBalanceDb(0.5f, 1.0f) - 6.0206f) < 0.002f);
+    CHECK(std::abs(stereoBalanceDb(1.0f, 0.5f) + 6.0206f) < 0.002f);
+    CHECK(stereoBalancePosition(100.0f) == 1.0f);
+    CHECK(stereoBalancePosition(-100.0f) == -1.0f);
+    CHECK(stereoBalancePosition(0.0f) == 0.0f);
+
     SpectrumAnalyzer analyzer;
     CHECK(analyzer.bandCount() == 128);
 
@@ -92,6 +114,13 @@ int main() {
         CHECK(result.bandCount == count);
         CHECK(result.rmsLeft > 0.1f && result.rmsRight > 0.1f);
         CHECK(result.peakLeft > 0.5f && result.peakRight > 0.3f);
+        CHECK(std::isfinite(result.balanceDb));
+        CHECK(std::isfinite(result.balanceDbSmoothed));
+        CHECK(result.balanceDb < 0.0f); // left 0.6, right 0.4
+        bool rawLeftDetected = false;
+        for (std::size_t b = 0; b < count; ++b)
+            rawLeftDetected |= result.leftRawDb[b] > -40.0f;
+        CHECK(rawLeftDetected);
         bool leftActive = false, rightActive = false;
         for (std::size_t b = 0; b < count; ++b) {
             CHECK(result.left[b] >= 0.0f && result.left[b] <= 1.0f);
