@@ -12,6 +12,7 @@
 #include <cstdio>
 #include <numbers>
 #include <string>
+#include <string_view>
 
 using namespace spectrum;
 
@@ -69,6 +70,7 @@ Options parse(int argc, char** argv, Options options) {
         else if (flag == "--source" && i + 1 < argc) {
             options.source = argv[++i];
             options.demo = false;
+            options.loopback = false;
         }
         else if (flag == "--palette" && i + 1 < argc) {
             const std::string value = argv[++i];
