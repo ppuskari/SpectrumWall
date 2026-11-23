@@ -37,6 +37,8 @@ public:
     void toggleParticles() { particlesEnabled_ = !particlesEnabled_; }
     void toggleCenterMirror() { centerMirror_ = !centerMirror_; }
     bool centerMirrored() const { return centerMirror_; }
+    void toggleRightPortraitMirror() { rightPortraitMirror_ = !rightPortraitMirror_; }
+    bool rightPortraitMirrored() const { return rightPortraitMirror_; }
     bool particlesEnabled() const { return particlesEnabled_; }
     std::size_t screenCount() const { return screens_.size(); }
 
@@ -78,5 +80,6 @@ private:
     bool reflectionsEnabled_ = true;
     bool particlesEnabled_ = true;
     bool centerMirror_ = true;
+    bool rightPortraitMirror_ = true;
 };
 } // namespace spectrum
