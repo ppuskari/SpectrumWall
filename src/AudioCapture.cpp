@@ -84,7 +84,9 @@ bool AudioCapture::selectPreferred(std::string_view search, bool loopback) {
     if (!search.empty()) {
         const std::string needle = lower(search);
         for (std::size_t i = 0; i < endpoints_.size(); ++i) {
-            if (lower(endpoints_[i].name).find(needle) != std::string::npos) {
+            if (endpoints_[i].type ==
+                    (loopback ? ma_device_type_loopback : ma_device_type_capture) &&
+                lower(endpoints_[i].name).find(needle) != std::string::npos) {
                 return select(i);
             }
         }
