@@ -88,7 +88,7 @@ Options parse(int argc, char** argv) {
                       " [--palette 1..8] [--smoothing fast|balanced|liquid]");
             std::puts("Keys: Esc/Q quit; N next source; L toggle input/loopback;"
                       " D demo; 1..8/C palette; S smoothing; F frequency soften;"
-                      " G glow; T trails; R reflections; P particles; [/] bands; B presets");
+                      " G glow; T trails; R reflections; P particles; M center mirror; [/] bands; B presets");
             options.list = true;
         }
     }
@@ -146,7 +146,7 @@ int main(int argc, char** argv) {
             std::printf("SpectrumWall: %zu active screens. "
                         "ESC/Q quit | N next audio | L loopback | D demo | 1-8 palettes |"
                         " S smoothing | F soften | G glow | T trails | R reflections |"
-                        " P particles | [/] bands | B presets\n",
+                        " P particles | M mirror center | [/] bands | B presets\n",
                         wall.screenCount());
             SpectrumAnalyzer analyzer(options.bands);
             analyzer.setSmoothingMode(options.smoothing);
@@ -232,6 +232,11 @@ int main(int argc, char** argv) {
                         wall.toggleParticles();
                         std::printf("\nReactive particles: %s\n",
                                     wall.particlesEnabled() ? "ON" : "OFF");
+                        break;
+                    case SDLK_M:
+                        wall.toggleCenterMirror();
+                        std::printf("\nCenter stereo bass-inward mirror: %s\n",
+                                    wall.centerMirrored() ? "ON" : "OFF");
                         break;
                     case SDLK_LEFTBRACKET:
                         analyzer.setBandCount(std::max(kMinBands,
