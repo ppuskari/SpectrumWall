@@ -2,6 +2,7 @@
 #include "SpectrumAnalyzer.hpp"
 #include "WallRenderer.hpp"
 #include "VisualStyle.hpp"
+#include "SettingsStore.hpp"
 #include <SDL3/SDL.h>
 #include <algorithm>
 #include <array>
@@ -28,21 +29,47 @@ struct Options {
     SpectrumStyle visual = SpectrumStyle::Lines;
     bool engineering = false;
     bool balance = false;
+    bool spectralSoftening = true;
+    int glow = 2;
+    bool trails = true;
+    bool reflections = true;
+    bool particles = true;
+    bool centerMirror = true;
+    bool rightPortraitMirror = true;
+    bool noSave = false;
     std::string source;
 };
 
-Options parse(int argc, char** argv) {
-    Options options;
+Options parse(int argc, char** argv, Options options) {
     for (int i = 1; i < argc; ++i) {
         const std::string flag = argv[i];
         if (flag == "--demo") options.demo = true;
-        else if (flag == "--loopback") options.loopback = true;
+        else if (flag == "--no-demo") options.demo = false;
+        else if (flag == "--defaults") { /* ignore stored settings: handled before parse */ }
+        else if (flag == "--no-save") options.noSave = true;
+        else if (flag == "--loopback") {
+            options.loopback = true;
+            options.demo = false;
+            options.source.clear();
+        }
+        else if (flag == "--capture") {
+            options.loopback = false;
+            options.demo = false;
+            options.source.clear();
+        }
         else if (flag == "--fourth") options.fourth = true;
+        else if (flag == "--no-fourth") options.fourth = false;
         else if (flag == "--engineering") options.engineering = true;
+        else if (flag == "--no-engineering") options.engineering = false;
         else if (flag == "--stereo-balance") options.balance = true;
+        else if (flag == "--no-stereo-balance") options.balance = false;
         else if (flag == "--windowed") options.windowed = true;
+        else if (flag == "--fullscreen") options.windowed = false;
         else if (flag == "--list-devices") options.list = true;
-        else if (flag == "--source" && i + 1 < argc) options.source = argv[++i];
+        else if (flag == "--source" && i + 1 < argc) {
+            options.source = argv[++i];
+            options.demo = false;
+        }
         else if (flag == "--palette" && i + 1 < argc) {
             const std::string value = argv[++i];
             int n = 0;
@@ -102,12 +129,13 @@ Options parse(int argc, char** argv) {
             std::puts("SpectrumWall [--source TEXT] [--loopback] [--demo]"
                       " [--fourth] [--windowed] [--list-devices] [--bands 64..256]"
                       " [--palette 1..8] [--smoothing fast|balanced|liquid]"
-                      " [--visual led|lines|hybrid] [--engineering] [--stereo-balance]");
+                      " [--visual led|lines|hybrid] [--engineering] [--stereo-balance]"
+                      " [--defaults] [--no-save]");
             std::puts("Keys: Esc/Q quit; N next source; L toggle input/loopback;"
                       " D demo; 1..8/C palette; S smoothing; F frequency soften;"
                       " G glow; T trails; R reflections; P particles; V visual style; M center mirror;"
                       " H right portrait mirror; E engineering axes; J stereo balance;"
-                      " [/] bands; B presets");
+                      " [/] bands; B presets; config auto-saves on exit");
             options.list = true;
         }
     }
@@ -136,8 +164,45 @@ void syntheticStereo(std::array<float, kFFTFrames * 2>& samples, double endSecon
 }
 
 int main(int argc, char** argv) {
-    const Options options = parse(argc, argv);
+    // The INI lives next to SpectrumWall.exe even if launched from another
+    // working directory. Explicit command-line settings always win.
+    const auto settingsPath = sessionSettingsPath(
+        argc > 0 ? argv[0] : nullptr);
+    bool ignoreSaved = false;
+    for (int i = 1; i < argc; ++i)
+        if (std::string_view(argv[i]) == "--defaults") ignoreSaved = true;
+
+    bool loaded = false;
+    const SessionSettings saved =
+        ignoreSaved ? SessionSettings{} :
+                      readSessionSettings(settingsPath, &loaded);
+    Options initial;
+    if (loaded) {
+        initial.bands = saved.bands;
+        initial.palette = saved.palette - 1;
+        initial.visual = static_cast<SpectrumStyle>(saved.visual);
+        initial.smoothing = static_cast<SmoothingMode>(saved.smoothing);
+        initial.engineering = saved.engineering;
+        initial.balance = saved.stereoBalance;
+        initial.spectralSoftening = saved.spectralSoftening;
+        initial.glow = saved.glow;
+        initial.trails = saved.trails;
+        initial.reflections = saved.reflections;
+        initial.particles = saved.particles;
+        initial.centerMirror = saved.centerMirror;
+        initial.rightPortraitMirror = saved.rightPortraitMirror;
+        initial.fourth = saved.fourth;
+        initial.windowed = saved.windowed;
+        initial.demo = saved.demo;
+        initial.loopback = saved.loopback;
+        initial.source = saved.source;
+    }
+    const Options options = parse(argc, argv, initial);
     if (!options.valid) return 2;
+    std::printf("SpectrumWall config: %s (%s)\\n",
+                settingsPath.string().c_str(),
+                ignoreSaved ? "defaults requested" :
+                loaded ? "restored" : "defaults, save on exit");
     AudioCapture audio;
     const bool audioAvailable = audio.initialize();
     if (audioAvailable) audio.printEndpoints();
@@ -171,8 +236,15 @@ int main(int argc, char** argv) {
             wall.setSpectrumStyle(options.visual);
             wall.setEngineering(options.engineering);
             wall.setStereoBalance(options.balance);
+            wall.setGlowMode(options.glow);
+            wall.setTrails(options.trails);
+            wall.setReflections(options.reflections);
+            wall.setParticles(options.particles);
+            wall.setCenterMirror(options.centerMirror);
+            wall.setRightPortraitMirror(options.rightPortraitMirror);
             SpectrumAnalyzer analyzer(options.bands);
             analyzer.setSmoothingMode(options.smoothing);
+            analyzer.setSpectralSoftening(options.spectralSoftening);
             std::printf("Spectrum resolution: %zu active bands (4096-point FFT).\n",
                         analyzer.bandCount());
             std::array<float, kFFTFrames * 2> samples{};
@@ -332,6 +404,39 @@ int main(int argc, char** argv) {
                 if (elapsed < framePeriod) {
                     SDL_Delay(static_cast<Uint32>((framePeriod - elapsed) / 1000000ULL));
                 }
+            }
+            // Only one small disk write per normal shutdown (Esc/Q or close).
+            // Use a temporary file + atomic replacement to avoid corrupting
+            // the previous good settings if the machine loses power.
+            if (!options.noSave) {
+                SessionSettings finalSettings;
+                finalSettings.bands = analyzer.bandCount();
+                finalSettings.palette = theme + 1;
+                finalSettings.visual = static_cast<int>(wall.spectrumStyle());
+                finalSettings.smoothing = static_cast<int>(analyzer.smoothingMode());
+                finalSettings.engineering = wall.engineeringEnabled();
+                finalSettings.stereoBalance = wall.stereoBalanceEnabled();
+                finalSettings.spectralSoftening = analyzer.spectralSoftening();
+                finalSettings.glow = wall.glowMode();
+                finalSettings.trails = wall.trailsEnabled();
+                finalSettings.reflections = wall.reflectionsEnabled();
+                finalSettings.particles = wall.particlesEnabled();
+                finalSettings.centerMirror = wall.centerMirrored();
+                finalSettings.rightPortraitMirror = wall.rightPortraitMirrored();
+                finalSettings.fourth = options.fourth;
+                finalSettings.windowed = options.windowed;
+                finalSettings.demo = demo;
+                finalSettings.loopback = audio.active()
+                    ? audio.currentIsLoopback() : options.loopback;
+                finalSettings.source = audio.active()
+                    ? audio.currentName() : options.source;
+                if (writeSessionSettings(settingsPath, finalSettings))
+                    std::printf("\\nSaved SpectrumWall preferences: %s\\n",
+                                settingsPath.string().c_str());
+                else
+                    std::fprintf(stderr,
+                        "\\nCannot save SpectrumWall.ini beside the executable; "
+                        "check folder permissions.\\n");
             }
             std::puts("\nSpectrumWall shutdown.");
         }
