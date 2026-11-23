@@ -16,7 +16,7 @@ using namespace spectrum;
 
 // Explicit checks remain active in Release builds (unlike assert under NDEBUG).
 #define CHECK(expr) do { if (!(expr)) { \
-    std::fprintf(stderr, "CHECK failed: %s (line %d)\\n", #expr, __LINE__); \
+    std::fprintf(stderr, "CHECK failed: %s (line %d)\n", #expr, __LINE__); \
     return 1; \
 } } while (false)
 
@@ -232,8 +232,8 @@ int main() {
     // Edits to a hand-maintained configuration must be range-checked.
     {
         std::ofstream output(configPath, std::ios::trunc);
-        output << "version=1\\nbands=900\\npalette=99\\n"
-               << "visual=9\\nengineering=true\\nsource=Realtek\\n";
+        output << "version=1\nbands=900\npalette=99\n"
+               << "visual=9\nengineering=true\nsource=Realtek\n";
     }
     restored = readSessionSettings(configPath, &loaded);
     CHECK(loaded);
@@ -242,7 +242,7 @@ int main() {
     CHECK(restored.source == "Realtek");
     {
         std::ofstream output(configPath, std::ios::trunc);
-        output << "version=2\\nbands=192\\n";
+        output << "version=2\nbands=192\n";
     }
     restored = readSessionSettings(configPath, &loaded);
     CHECK(!loaded);
