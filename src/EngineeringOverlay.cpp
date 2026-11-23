@@ -48,6 +48,8 @@ void drawFrequencyAxis(SDL_Renderer* r, SDL_FRect plot, bool mirror) {
         // by checking absolute X against all already placed labels.
         if (x < lastLabelX && lastLabelX - x < minimumTickPx)
             continue;
+        // Restore bright text color after the faint frequency grid line.
+        SDL_SetRenderDrawColor(r, 216, 234, 248, 245);
         // Local spacing: left-to-right entries can be reversed when mirrored.
         if (hz >= 1000.0f)
             SDL_RenderDebugTextFormat(r, x - 10.0f, baseY + 10.0f,
@@ -69,11 +71,13 @@ void drawDecibelAxis(SDL_Renderer* r, SDL_FRect plot, float axisX, bool center) 
         if (center) {
             engineeringRect(r, {axisX - 21, y - 5, 42, 11},
                             {4, 15, 24, 208});
+            SDL_SetRenderDrawColor(r, 221, 236, 248, 255);
             SDL_RenderDebugTextFormat(r, axisX - 18, y - 4, "%g", db);
         } else {
             const float x = axisX + (axisX <= plot.x + 1 ? 5.0f : -38.0f);
             engineeringRect(r, {x - 2.0f, y - 5.0f, 34.0f, 11.0f},
                             {4, 15, 24, 195});
+            SDL_SetRenderDrawColor(r, 221, 236, 248, 255);
             SDL_RenderDebugTextFormat(r, x, y - 4.0f, "%g", db);
         }
     }
