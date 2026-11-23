@@ -174,6 +174,26 @@ normally with either layer enabled.
   The probe uses the pre-smoothed Hann-windowed FFT magnitude, *not* the
   temporally smoothed display height. Due to the current 4096-sample FFT,
   adjacent display buckets can share FFT bins, particularly at low frequencies.
+- In Engineering Mode, **both lower center level meters** now have their
+  own **-72 to 0 dBFS rulers**, with the left-hand scale mirrored together with
+  its VU bar. The small cyan indicator shows the *current unsmoothed full-band
+  RMS*, the bright white mark shows the *current sample peak*, and the filled
+  level bar remains a *smoothed RMS* for visual stability. All positions use
+  the **same logarithmic dBFS scale** (older releases incorrectly placed the
+  peak marker by raw linear amplitude).
+- Just below each meter, an always-visible readout prints **RMS dBFS** and
+  **SAMPLE PK dBFS** for that channel. Hover the mouse over either bottom meter
+  to inspect the **cursor's dBFS threshold** alongside the live RMS/peak values.
+  The pointer and scale honor the center-left mirror toggle, and the -2 dBFS
+  headroom reference is now placed accurately on the logarithmic scale.
+- Audacity's recording/playback meters combine a current peak, RMS overlay, and
+  recent peak hold. Our RMS bars can legitimately look much lower than
+  Audacity's peak level (e.g., -12 dBFS RMS with a -2 dBFS sample peak).
+  For a meaningful check, compare **SpectrumWall SAMPLE PK dBFS** with
+  Audacity's **current peak**, using the same physical input and comparable
+  time windows. The current release uses a 4096-frame (~85 ms at 48 kHz)
+  analysis window, so fast transient timing can still differ. The lower meter
+  is a sample-peak display, not an intersample true-peak meter.
 - Press **J** to show the **STEREO RMS BIAS** gauge beneath the center
   waveforms. The pointer slides left for left-channel dominance and right for
   right-channel dominance, in **dB of overall R/L RMS amplitude ratio**.
