@@ -137,7 +137,7 @@ Options parse(int argc, char** argv, Options options) {
                       " D demo; 1..8/C palette; S smoothing; F frequency soften;"
                       " G glow; T trails; R reflections; P particles; V visual style; M center mirror;"
                       " H right portrait mirror; E engineering axes; J stereo balance;"
-                      " [/] bands; B presets; config auto-saves on exit");
+                      " [/] bands; B presets; F1 / right click shortcut help; config auto-saves on exit");
             options.list = true;
         }
     }
@@ -233,7 +233,7 @@ int main(int argc, char** argv) {
                         "ESC/Q quit | N next audio | L loopback | D demo | 1-8 palettes |"
                         " S smoothing | F soften | G glow | T trails | R reflections |"
                         " P particles | V visual | M center mirror | H right mirror |"
-                        " E engineering | J balance | [/] bands | B presets\n",
+                        " E engineering | J balance | F1 / right click help | [/] bands | B presets\n",
                         wall.screenCount());
             wall.setSpectrumStyle(options.visual);
             wall.setEngineering(options.engineering);
@@ -270,7 +270,42 @@ int main(int argc, char** argv) {
                         event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED) {
                         running = false;
                     }
+                    // Per-window shortcut help: right-click opens on the
+                    // clicked monitor, left-click outside dismisses.
+                    if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
+                        if (event.button.button == SDL_BUTTON_RIGHT) {
+                            wall.toggleShortcutHelp(event.button.windowID,
+                                                    event.button.x, event.button.y);
+                            continue;
+                        }
+                        if (event.button.button == SDL_BUTTON_LEFT &&
+                            wall.shortcutHelpOpen()) {
+                            wall.dismissShortcutHelp();
+                            continue;
+                        }
+                    }
+                    if (event.type == SDL_EVENT_MOUSE_WHEEL &&
+                        wall.shortcutHelpOpen()) {
+                        wall.advanceShortcutHelpPage(event.wheel.y < 0.0f ? 1 :
+                                                     event.wheel.y > 0.0f ? -1 : 0);
+                        continue;
+                    }
                     if (event.type != SDL_EVENT_KEY_DOWN || event.key.repeat) continue;
+                    if (event.key.key == SDLK_F1) {
+                        wall.toggleShortcutHelp(event.key.windowID);
+                        continue;
+                    }
+                    if (wall.shortcutHelpOpen()) {
+                        if (event.key.key == SDLK_ESCAPE) {
+                            // First Escape closes help. Second Escape quits.
+                            wall.dismissShortcutHelp();
+                            continue;
+                        }
+                        if (event.key.key == SDLK_TAB) {
+                            wall.advanceShortcutHelpPage(1);
+                            continue;
+                        }
+                    }
                     switch (event.key.key) {
                     case SDLK_ESCAPE:
                     case SDLK_Q: running = false; break;
