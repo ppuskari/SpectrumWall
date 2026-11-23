@@ -1,5 +1,6 @@
 #pragma once
 #include "AudioCapture.hpp"
+#include "EngineeringMath.hpp"
 #include <array>
 #include <complex>
 #include <utility>
@@ -20,6 +21,12 @@ struct VisualState {
     std::array<float, kMaxBands> right{};
     std::array<float, kMaxBands> leftPeaks{};
     std::array<float, kMaxBands> rightPeaks{};
+    // Unsmooothed, pre-display FFT band maxima in true dBFS for engineering
+    // probes. Independent of temporal/frequency smoothing and LED normalization.
+    std::array<float, kMaxBands> leftRawDb{};
+    std::array<float, kMaxBands> rightRawDb{};
+    float balanceDb = 0.0f;
+    float balanceDbSmoothed = 0.0f;
     std::array<float, kWavePoints> waveLeft{};
     std::array<float, kWavePoints> waveRight{};
     float rmsLeft = 0.0f;
@@ -45,7 +52,8 @@ public:
 
 private:
     void transform(std::size_t channel, const std::array<float, kFFTFrames * 2>& input,
-                   std::array<float, kMaxBands>& bars);
+                   std::array<float, kMaxBands>& bars,
+                   std::array<float, kMaxBands>& rawDb);
     std::array<float, kFFTFrames> window_{};
     std::array<std::complex<float>, kFFTFrames> fft_{};
     std::array<float, kMaxBands> leftHold_{}, rightHold_{};
