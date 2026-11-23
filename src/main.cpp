@@ -26,6 +26,8 @@ struct Options {
     int palette = 3; // Prism Rainbow: all frequencies visibly color-coded
     SmoothingMode smoothing = SmoothingMode::Balanced;
     SpectrumStyle visual = SpectrumStyle::Lines;
+    bool engineering = false;
+    bool balance = false;
     std::string source;
 };
 
@@ -36,6 +38,8 @@ Options parse(int argc, char** argv) {
         if (flag == "--demo") options.demo = true;
         else if (flag == "--loopback") options.loopback = true;
         else if (flag == "--fourth") options.fourth = true;
+        else if (flag == "--engineering") options.engineering = true;
+        else if (flag == "--stereo-balance") options.balance = true;
         else if (flag == "--windowed") options.windowed = true;
         else if (flag == "--list-devices") options.list = true;
         else if (flag == "--source" && i + 1 < argc) options.source = argv[++i];
@@ -98,11 +102,12 @@ Options parse(int argc, char** argv) {
             std::puts("SpectrumWall [--source TEXT] [--loopback] [--demo]"
                       " [--fourth] [--windowed] [--list-devices] [--bands 64..256]"
                       " [--palette 1..8] [--smoothing fast|balanced|liquid]"
-                      " [--visual led|lines|hybrid]");
+                      " [--visual led|lines|hybrid] [--engineering] [--stereo-balance]");
             std::puts("Keys: Esc/Q quit; N next source; L toggle input/loopback;"
                       " D demo; 1..8/C palette; S smoothing; F frequency soften;"
                       " G glow; T trails; R reflections; P particles; V visual style; M center mirror;"
-                      " H right portrait mirror; [/] bands; B presets");
+                      " H right portrait mirror; E engineering axes; J stereo balance;"
+                      " [/] bands; B presets");
             options.list = true;
         }
     }
@@ -160,9 +165,12 @@ int main(int argc, char** argv) {
             std::printf("SpectrumWall: %zu active screens. "
                         "ESC/Q quit | N next audio | L loopback | D demo | 1-8 palettes |"
                         " S smoothing | F soften | G glow | T trails | R reflections |"
-                        " P particles | V visual | M center mirror | H right mirror | [/] bands | B presets\n",
+                        " P particles | V visual | M center mirror | H right mirror |"
+                        " E engineering | J balance | [/] bands | B presets\n",
                         wall.screenCount());
             wall.setSpectrumStyle(options.visual);
+            wall.setEngineering(options.engineering);
+            wall.setStereoBalance(options.balance);
             SpectrumAnalyzer analyzer(options.bands);
             analyzer.setSmoothingMode(options.smoothing);
             std::printf("Spectrum resolution: %zu active bands (4096-point FFT).\n",
@@ -263,6 +271,16 @@ int main(int argc, char** argv) {
                         wall.toggleRightPortraitMirror();
                         std::printf("\nRight portrait frequency mirror: %s\n",
                                     wall.rightPortraitMirrored() ? "ON" : "OFF");
+                        break;
+                    case SDLK_E:
+                        wall.toggleEngineering();
+                        std::printf("\nEngineering axes and live probe: %s\n",
+                                    wall.engineeringEnabled() ? "ON" : "OFF");
+                        break;
+                    case SDLK_J:
+                        wall.toggleStereoBalance();
+                        std::printf("\nStereo RMS balance meter: %s\n",
+                                    wall.stereoBalanceEnabled() ? "ON" : "OFF");
                         break;
                     case SDLK_LEFTBRACKET:
                         analyzer.setBandCount(std::max(kMinBands,
