@@ -207,23 +207,28 @@ void WallRenderer::drawWave(SDL_Renderer* r, SDL_FRect plot,
 }
 
 void WallRenderer::drawLevel(SDL_Renderer* r, SDL_FRect plot, float rms,
-                             float peak, int theme) {
+                             float peak, int theme, bool mirror) {
     const float level = std::clamp(rms, 0.0f, 1.0f);
     const float peakPos = std::clamp(peak, 0.0f, 1.0f);
     constexpr int segments = 80;
     const float step = plot.w / segments;
     for (int i = 0; i < segments; ++i) {
         const float f = static_cast<float>(i + 1) / segments;
-        rect(r, {plot.x + i * step, plot.y, step * 0.86f, plot.h},
+        // Mirror the lower-left center VU bar toward the outside, matching
+        // the inward-facing bass mapping of the spectrum above it.
+        const float x = plot.x + (mirror ? (segments - 1 - i) : i) * step;
+        rect(r, {x, plot.y, step * 0.86f, plot.h},
              colorFor(f, f, level, f <= level, theme));
     }
-    rect(r, { plot.x + peakPos * plot.w - 2.0f, plot.y - 2.0f, 4.0f, plot.h + 4.0f },
+    rect(r, { plot.x + (mirror ? 1.0f - peakPos : peakPos) * plot.w - 2.0f,
+              plot.y - 2.0f, 4.0f, plot.h + 4.0f },
          peak > 0.99f ? SDL_Color{255, 40, 44, 255}
                       : SDL_Color{235, 241, 255, 255});
     // A faint reference line marks the project's -2 dBFS headroom target.
     const float target = std::pow(10.0f, -2.0f / 20.0f);
-    line(r, plot.x + target * plot.w, plot.y - 3.0f,
-         plot.x + target * plot.w, plot.y + plot.h + 3.0f,
+    const float targetX = plot.x + (mirror ? 1.0f - target : target) * plot.w;
+    line(r, targetX, plot.y - 3.0f,
+         targetX, plot.y + plot.h + 3.0f,
          { 240, 240, 240, 150 });
 }
 
@@ -274,7 +279,7 @@ void WallRenderer::drawCenter(SDL_Renderer* r, float w, float h,
     drawWave(r, {pad, h * 0.77f, width, h * 0.115f}, state.waveRight,
              { 208, 113, 255, 255 });
     drawLevel(r, {pad, h * 0.927f, width * 0.485f, h * 0.025f},
-              state.vuLeft, state.peakLeft, theme);
+              state.vuLeft, state.peakLeft, theme, centerMirror_);
     drawLevel(r, {pad + width * 0.515f, h * 0.927f, width * 0.485f, h * 0.025f},
               state.vuRight, state.peakRight, theme);
 }
