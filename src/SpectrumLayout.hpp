@@ -8,4 +8,10 @@ constexpr std::size_t visualBandIndex(std::size_t band, std::size_t count,
                                       bool mirrorHorizontally) {
     return mirrorHorizontally ? count - 1 - band : band;
 }
+// Portrait left stays in normal frequency order; portrait right is mirrored
+// by default to give the whole installation an outward/inward visual symmetry.
+constexpr bool portraitBandMirrored(bool leftPortrait,
+                                    bool mirrorRightPortrait = true) {
+    return !leftPortrait && mirrorRightPortrait;
+}
 } // namespace spectrum
