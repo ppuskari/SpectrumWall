@@ -1,6 +1,7 @@
 #include "AudioCapture.hpp"
 #include "SpectrumAnalyzer.hpp"
 #include "WallRenderer.hpp"
+#include "VisualStyle.hpp"
 #include <SDL3/SDL.h>
 #include <algorithm>
 #include <array>
