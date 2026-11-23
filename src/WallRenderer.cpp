@@ -288,6 +288,11 @@ void WallRenderer::drawScreen(const ScreenWindow& screen,
     case ScreenRole::Center: drawCenter(r, w, h, state, theme); break;
     case ScreenRole::Waterfall: drawWaterfall(r, w, h, state.bandCount, theme); break;
     }
+    // Minimal hardware-accelerated OSD confirms live band changes in fullscreen.
+    SDL_SetRenderDrawColor(r, 192, 224, 232, 235);
+    SDL_SetRenderScale(r, 2.0f, 2.0f);
+    SDL_RenderDebugTextFormat(r, 8.0f, 8.0f, "%zu BANDS", state.bandCount);
+    SDL_SetRenderScale(r, 1.0f, 1.0f);
     SDL_RenderPresent(r);
 }
 
