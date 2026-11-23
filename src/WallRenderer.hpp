@@ -7,6 +7,15 @@
 
 namespace spectrum {
 enum class ScreenRole { Center, Left, Right, Waterfall };
+enum class SpectrumStyle { Led = 0, Lines = 1, Hybrid = 2 };
+inline const char* spectrumStyleName(SpectrumStyle style) {
+    switch (style) {
+    case SpectrumStyle::Led: return "LED";
+    case SpectrumStyle::Lines: return "FLUID LINES";
+    case SpectrumStyle::Hybrid: return "HYBRID";
+    }
+    return "LED";
+}
 
 struct ScreenWindow {
     ScreenRole role = ScreenRole::Center;
@@ -35,6 +44,12 @@ public:
     void toggleReflections() { reflectionsEnabled_ = !reflectionsEnabled_; }
     bool reflectionsEnabled() const { return reflectionsEnabled_; }
     void toggleParticles() { particlesEnabled_ = !particlesEnabled_; }
+    void cycleSpectrumStyle() {
+        spectrumStyle_ = static_cast<SpectrumStyle>(
+            (static_cast<int>(spectrumStyle_) + 1) % 3);
+    }
+    void setSpectrumStyle(SpectrumStyle style) { spectrumStyle_ = style; }
+    SpectrumStyle spectrumStyle() const { return spectrumStyle_; }
     void toggleCenterMirror() { centerMirror_ = !centerMirror_; }
     bool centerMirrored() const { return centerMirror_; }
     void toggleRightPortraitMirror() { rightPortraitMirror_ = !rightPortraitMirror_; }
@@ -54,6 +69,22 @@ private:
                          const std::array<float, kMaxBands>& values,
                          std::size_t bands, int palette, bool right, bool mirror = false);
     void drawParticles(SDL_Renderer* r, float w, float h, float pulse, int palette);
+    void drawCurveSpectrum(SDL_Renderer* r, SDL_FRect plot,
+                           const std::array<float, kMaxBands>& values,
+                           const std::array<float, kMaxBands>& peaks,
+                           const std::array<float, kMaxBands>& trails,
+                           std::size_t bands, int palette, bool right,
+                           bool mirror, bool fill);
+    void drawCurveGlow(SDL_Renderer* r, SDL_FRect plot,
+                       const std::array<float, kMaxBands>& values,
+                       std::size_t bands, int palette, bool right,
+                       bool mirror);
+    void drawSpectrumStyled(SDL_Renderer* r, SDL_FRect plot,
+                            const std::array<float, kMaxBands>& values,
+                            const std::array<float, kMaxBands>& peaks,
+                            const std::array<float, kMaxBands>& trails,
+                            std::size_t bands, int palette, bool right,
+                            bool mirror);
     void drawPortrait(SDL_Renderer* r, float w, float h,
                       const VisualState& state, bool left, int theme);
     void drawCenter(SDL_Renderer* r, float w, float h,
@@ -81,5 +112,6 @@ private:
     bool particlesEnabled_ = true;
     bool centerMirror_ = true;
     bool rightPortraitMirror_ = true;
+    SpectrumStyle spectrumStyle_ = SpectrumStyle::Lines;
 };
 } // namespace spectrum
