@@ -1,4 +1,5 @@
 #include "SpectrumAnalyzer.hpp"
+#include "CurveSampling.hpp"
 #include "SpectrumLayout.hpp"
 #include "VisualStyle.hpp"
 #include <array>
@@ -41,6 +42,36 @@ int main() {
         CHECK(visualBandIndex(0, count, portraitBandMirrored(true)) == 0);
         CHECK(visualBandIndex(0, count, portraitBandMirrored(false)) == count - 1);
         CHECK(visualBandIndex(count - 1, count, portraitBandMirrored(false)) == 0);
+    }
+
+    // Curves must interpolate the actual FFT values without overshoot and
+    // preserve both channel orientation and left/center/right mirror behavior.
+    for (const std::size_t bands : {64u, 96u, 128u, 192u, 256u}) {
+        std::array<float, kMaxBands> ramp{};
+        for (std::size_t i = 0; i < bands; ++i)
+            ramp[i] = static_cast<float>(i) /
+                      static_cast<float>(bands - 1);
+        for (bool mirror : {false, true}) {
+            const float firstExpected = mirror ? 1.0f : 0.0f;
+            const float lastExpected = mirror ? 0.0f : 1.0f;
+            CHECK(std::abs(sampleSpectrumCurve(ramp, bands, 0.0f, mirror)
+                           - firstExpected) < 1.0e-6f);
+            CHECK(std::abs(sampleSpectrumCurve(ramp, bands,
+                           static_cast<float>(bands - 1), mirror)
+                           - lastExpected) < 1.0e-6f);
+            for (std::size_t i = 0; i < (bands - 1) * 3 + 1; ++i) {
+                const float pos = static_cast<float>(i) / 3.0f;
+                const float v = sampleSpectrumCurve(ramp, bands, pos, mirror);
+                CHECK(std::isfinite(v));
+                CHECK(v >= 0.0f && v <= 1.0f);
+                const auto bin = static_cast<std::size_t>(pos);
+                const float a = ramp[visualBandIndex(bin, bands, mirror)];
+                const float b = ramp[visualBandIndex(
+                    std::min(bin + 1, bands - 1), bands, mirror)];
+                CHECK(v >= std::min(a,b)-1e-6f);
+                CHECK(v <= std::max(a,b)+1e-6f);
+            }
+        }
     }
 
     SpectrumAnalyzer analyzer;
