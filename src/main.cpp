@@ -25,6 +25,7 @@ struct Options {
     std::size_t bands = kDefaultBands;
     int palette = 3; // Prism Rainbow: all frequencies visibly color-coded
     SmoothingMode smoothing = SmoothingMode::Balanced;
+    SpectrumStyle visual = SpectrumStyle::Lines;
     std::string source;
 };
 
@@ -50,6 +51,17 @@ Options parse(int argc, char** argv) {
                 options.valid = false;
             } else {
                 options.palette = n - 1;
+            }
+        }
+        else if (flag == "--visual" && i + 1 < argc) {
+            const std::string mode = argv[++i];
+            if (mode == "led") options.visual = SpectrumStyle::Led;
+            else if (mode == "lines") options.visual = SpectrumStyle::Lines;
+            else if (mode == "hybrid") options.visual = SpectrumStyle::Hybrid;
+            else {
+                std::fprintf(stderr, "Unknown --visual '%s' (led/lines/hybrid).\n",
+                             mode.c_str());
+                options.valid = false;
             }
         }
         else if (flag == "--smoothing" && i + 1 < argc) {
@@ -85,10 +97,11 @@ Options parse(int argc, char** argv) {
         else if (flag == "--help" || flag == "-h") {
             std::puts("SpectrumWall [--source TEXT] [--loopback] [--demo]"
                       " [--fourth] [--windowed] [--list-devices] [--bands 64..256]"
-                      " [--palette 1..8] [--smoothing fast|balanced|liquid]");
+                      " [--palette 1..8] [--smoothing fast|balanced|liquid]"
+                      " [--visual led|lines|hybrid]");
             std::puts("Keys: Esc/Q quit; N next source; L toggle input/loopback;"
                       " D demo; 1..8/C palette; S smoothing; F frequency soften;"
-                      " G glow; T trails; R reflections; P particles; M center mirror;"
+                      " G glow; T trails; R reflections; P particles; V visual style; M center mirror;"
                       " H right portrait mirror; [/] bands; B presets");
             options.list = true;
         }
@@ -147,8 +160,9 @@ int main(int argc, char** argv) {
             std::printf("SpectrumWall: %zu active screens. "
                         "ESC/Q quit | N next audio | L loopback | D demo | 1-8 palettes |"
                         " S smoothing | F soften | G glow | T trails | R reflections |"
-                        " P particles | M center mirror | H right mirror | [/] bands | B presets\n",
+                        " P particles | V visual | M center mirror | H right mirror | [/] bands | B presets\n",
                         wall.screenCount());
+            wall.setSpectrumStyle(options.visual);
             SpectrumAnalyzer analyzer(options.bands);
             analyzer.setSmoothingMode(options.smoothing);
             std::printf("Spectrum resolution: %zu active bands (4096-point FFT).\n",
@@ -159,7 +173,8 @@ int main(int argc, char** argv) {
             Uint64 lastFrame = SDL_GetTicksNS();
             Uint64 lastStats = lastFrame;
             unsigned frameCounter = 0;
-            std::printf("Palette: %s. Smoothing: %s.\n",
+            std::printf("Visualization: %s | Palette: %s | Smoothing: %s.\n",
+                        spectrumStyleName(wall.spectrumStyle()),
                         paletteName(theme), smoothingModeName(analyzer.smoothingMode()));
 
             while (running) {
@@ -233,6 +248,11 @@ int main(int argc, char** argv) {
                         wall.toggleParticles();
                         std::printf("\nReactive particles: %s\n",
                                     wall.particlesEnabled() ? "ON" : "OFF");
+                        break;
+                    case SDLK_V:
+                        wall.cycleSpectrumStyle();
+                        std::printf("\nSpectrum visualization: %s\n",
+                                    spectrumStyleName(wall.spectrumStyle()));
                         break;
                     case SDLK_M:
                         wall.toggleCenterMirror();
