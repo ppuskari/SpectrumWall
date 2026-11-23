@@ -6,8 +6,8 @@
 namespace spectrum {
 namespace {
 constexpr float kPi = std::numbers::pi_v<float>;
-constexpr float kFloorDb = -72.0f;
-constexpr float kTopDb = -2.0f;
+constexpr float kFloorDb = kSpectrumFloorDb;
+constexpr float kTopDb = kSpectrumCeilingDb;
 
 float normalized(float linear) {
     return std::clamp((toDb(linear) - kFloorDb) / (kTopDb - kFloorDb), 0.0f, 1.0f);
@@ -47,8 +47,8 @@ void SpectrumAnalyzer::setBandCount(std::size_t bands) {
     }
     state_.bandCount = bands;
 
-    constexpr float minFrequency = 30.0f;
-    constexpr float maxFrequency = 18000.0f;
+    constexpr float minFrequency = kMinSpectrumHz;
+    constexpr float maxFrequency = kMaxSpectrumHz;
     for (std::size_t band = 0; band < bands; ++band) {
         const float f0 = minFrequency * std::pow(maxFrequency / minFrequency,
                                     static_cast<float>(band) / static_cast<float>(bands));
@@ -72,7 +72,8 @@ void SpectrumAnalyzer::setBandCount(std::size_t bands) {
 
 void SpectrumAnalyzer::transform(std::size_t channel,
                                  const std::array<float, kFFTFrames * 2>& input,
-                                 std::array<float, kMaxBands>& bars) {
+                                 std::array<float, kMaxBands>& bars,
+                                 std::array<float, kMaxBands>& rawDb) {
     for (std::size_t i = 0; i < kFFTFrames; ++i) {
         fft_[i] = { input[2 * i + channel] * window_[i], 0.0f };
     }
@@ -107,14 +108,15 @@ void SpectrumAnalyzer::transform(std::size_t channel,
             magnitude = std::max(magnitude, std::abs(fft_[bin]) * scale);
         }
         bars[band] = normalized(magnitude);
+        rawDb[band] = toDb(magnitude);
     }
 }
 
 void SpectrumAnalyzer::update(const std::array<float, kFFTFrames * 2>& input, float dt) {
     dt = std::clamp(dt, 0.001f, 0.1f);
     std::array<float, kMaxBands> newLeft{}, newRight{};
-    transform(0, input, newLeft);
-    transform(1, input, newRight);
+    transform(0, input, newLeft, state_.leftRawDb);
+    transform(1, input, newRight, state_.rightRawDb);
 
     // Display-domain frequency smoothing. This does not invent FFT resolution:
     // it simply avoids jagged adjacent bar heights while retaining channel separation.
@@ -145,6 +147,15 @@ void SpectrumAnalyzer::update(const std::array<float, kFFTFrames * 2>& input, fl
     state_.rmsRight = std::sqrt(sumRight / static_cast<float>(kFFTFrames));
     state_.peakLeft = pkLeft;
     state_.peakRight = pkRight;
+
+    state_.balanceDb = stereoBalanceDb(state_.rmsLeft, state_.rmsRight);
+    // Slew the graphical stereo bias marker without slowing down its
+    // numerical readout. Short attack, slower decay avoids flickering.
+    const float tau = std::abs(state_.balanceDb) >
+                      std::abs(state_.balanceDbSmoothed) ? 0.085f : 0.24f;
+    const float balanceAlpha = 1.0f - std::exp(-dt / tau);
+    state_.balanceDbSmoothed +=
+        (state_.balanceDb - state_.balanceDbSmoothed) * balanceAlpha;
 
     // Frame-rate independent time constants, not arbitrary per-frame smoothing.
     float attackSeconds = 0.028f, releaseSeconds = 0.24f;
