@@ -1,6 +1,7 @@
 #pragma once
 #include "SpectrumAnalyzer.hpp"
 #include <SDL3/SDL.h>
+#include <algorithm>
 #include <array>
 #include <deque>
 #include <vector>
@@ -39,10 +40,13 @@ public:
               SmoothingMode smoothing = SmoothingMode::Balanced);
     void cycleGlow() { glowMode_ = (glowMode_ + 1) % 3; }
     int glowMode() const { return glowMode_; }
+    void setGlowMode(int mode) { glowMode_ = std::clamp(mode, 0, 2); }
     void toggleTrails() { trailsEnabled_ = !trailsEnabled_; }
     bool trailsEnabled() const { return trailsEnabled_; }
+    void setTrails(bool enabled) { trailsEnabled_ = enabled; }
     void toggleReflections() { reflectionsEnabled_ = !reflectionsEnabled_; }
     bool reflectionsEnabled() const { return reflectionsEnabled_; }
+    void setReflections(bool enabled) { reflectionsEnabled_ = enabled; }
     void toggleParticles() { particlesEnabled_ = !particlesEnabled_; }
     void cycleSpectrumStyle() {
         spectrumStyle_ = static_cast<SpectrumStyle>(
@@ -52,9 +56,12 @@ public:
     SpectrumStyle spectrumStyle() const { return spectrumStyle_; }
     void toggleCenterMirror() { centerMirror_ = !centerMirror_; }
     bool centerMirrored() const { return centerMirror_; }
+    void setCenterMirror(bool enabled) { centerMirror_ = enabled; }
     void toggleRightPortraitMirror() { rightPortraitMirror_ = !rightPortraitMirror_; }
     bool rightPortraitMirrored() const { return rightPortraitMirror_; }
+    void setRightPortraitMirror(bool enabled) { rightPortraitMirror_ = enabled; }
     bool particlesEnabled() const { return particlesEnabled_; }
+    void setParticles(bool enabled) { particlesEnabled_ = enabled; }
     void toggleEngineering() { engineeringEnabled_ = !engineeringEnabled_; }
     bool engineeringEnabled() const { return engineeringEnabled_; }
     void setEngineering(bool enabled) { engineeringEnabled_ = enabled; }
@@ -109,7 +116,7 @@ private:
     void drawWave(SDL_Renderer* r, SDL_FRect rect,
                   const std::array<float, kWavePoints>& samples, SDL_Color color);
     void drawLevel(SDL_Renderer* r, SDL_FRect rect, float rms,
-                   float peak, int theme);
+                   float peak, int theme, bool mirror = false);
     std::vector<ScreenWindow> screens_;
     std::deque<std::array<float, kMaxBands>> history_;
     std::size_t historyBandCount_ = 0;
