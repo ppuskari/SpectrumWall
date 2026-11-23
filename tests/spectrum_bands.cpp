@@ -1,4 +1,5 @@
 #include "SpectrumAnalyzer.hpp"
+#include "SpectrumLayout.hpp"
 #include "VisualStyle.hpp"
 #include <array>
 
@@ -21,6 +22,18 @@ int main() {
         const float t = static_cast<float>(i) / static_cast<float>(kSampleRate);
         stereo[i * 2] = 0.6f * std::sin(2.0f * pi * 110.0f * t);
         stereo[i * 2 + 1] = 0.4f * std::sin(2.0f * pi * 880.0f * t);
+    }
+
+    // Bass in the middle on the center stereo panel:
+    // left half maps low bin -> right edge, right half stays low -> left edge.
+    for (const std::size_t count : {64u, 96u, 128u, 256u}) {
+        for (std::size_t b = 0; b < count; ++b) {
+            CHECK(visualBandIndex(b, count, false) == b);
+            CHECK(visualBandIndex(b, count, true) == count - 1 - b);
+        }
+        CHECK(visualBandIndex(0, count, true) == count - 1);
+        CHECK(visualBandIndex(0, count, false) == 0);
+        CHECK(visualBandIndex(count - 1, count, true) == 0);
     }
 
     SpectrumAnalyzer analyzer;
