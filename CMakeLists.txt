@@ -25,6 +25,9 @@ add_executable(SpectrumWall
 )
 target_include_directories(SpectrumWall PRIVATE src "${miniaudio_SOURCE_DIR}")
 target_link_libraries(SpectrumWall PRIVATE SDL3::SDL3)
+if(WIN32)
+    target_compile_definitions(SpectrumWall PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
+endif()
 
 if(MSVC)
     target_compile_options(SpectrumWall PRIVATE /W4 /EHsc)
