@@ -36,6 +36,10 @@ public:
     bool snapshot(std::array<float, kFFTFrames * 2>& out);
     bool active() const { return deviceReady_; }
     std::string currentName() const;
+    bool currentIsLoopback() const {
+        return deviceReady_ && selected_ < endpoints_.size() &&
+               endpoints_[selected_].type == ma_device_type_loopback;
+    }
     const std::vector<AudioEndpoint>& endpoints() const { return endpoints_; }
 
 private:
