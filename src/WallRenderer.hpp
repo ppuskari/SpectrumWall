@@ -69,10 +69,18 @@ public:
     bool stereoBalanceEnabled() const { return stereoBalanceEnabled_; }
     void setStereoBalance(bool enabled) { stereoBalanceEnabled_ = enabled; }
     std::size_t screenCount() const { return screens_.size(); }
+    // The context-help popup is transient UI, never written to the INI.
+    void toggleShortcutHelp(SDL_WindowID windowId, float windowX = -1.0f,
+                            float windowY = -1.0f);
+    void dismissShortcutHelp() { helpWindowId_ = 0; helpPage_ = 0; }
+    bool shortcutHelpOpen() const { return helpWindowId_ != 0; }
+    void advanceShortcutHelpPage(int direction);
+
 
 private:
     void drawScreen(ScreenWindow& screen, const VisualState& state, int palette,
                     SmoothingMode smoothing);
+    void drawShortcutHelp(const ScreenWindow& screen, float width, float height);
     void drawEngineeringOverlay(const ScreenWindow& screen,
                                 const VisualState& state, float w, float h);
     void drawStereoBalance(SDL_Renderer* renderer, float w, float h,
@@ -132,5 +140,9 @@ private:
     SpectrumStyle spectrumStyle_ = SpectrumStyle::Lines;
     bool engineeringEnabled_ = false;
     bool stereoBalanceEnabled_ = false;
+    SDL_WindowID helpWindowId_ = 0;
+    int helpPage_ = 0;
+    float helpAnchorX_ = 0.5f;
+    float helpAnchorY_ = 0.35f;
 };
 } // namespace spectrum
