@@ -31,15 +31,18 @@ private:
                       const VisualState& state, bool left, int theme);
     void drawCenter(SDL_Renderer* r, float w, float h,
                     const VisualState& state, int theme);
-    void drawWaterfall(SDL_Renderer* r, float w, float h, int theme);
+    void drawWaterfall(SDL_Renderer* r, float w, float h,
+                       std::size_t bands, int theme);
     void drawSpectrum(SDL_Renderer* r, SDL_FRect rect,
-                      const std::array<float, kBands>& values,
-                      const std::array<float, kBands>& peaks, int theme);
+                      const std::array<float, kMaxBands>& values,
+                      const std::array<float, kMaxBands>& peaks,
+                      std::size_t bands, int theme);
     void drawWave(SDL_Renderer* r, SDL_FRect rect,
                   const std::array<float, kWavePoints>& samples, SDL_Color color);
     void drawLevel(SDL_Renderer* r, SDL_FRect rect, float rms,
                    float peak, int theme);
     std::vector<ScreenWindow> screens_;
-    std::deque<std::array<float, kBands>> history_;
+    std::deque<std::array<float, kMaxBands>> history_;
+    std::size_t historyBandCount_ = 0;
 };
 } // namespace spectrum
