@@ -35,6 +35,8 @@ Depending on your CMake/vcpkg generator, the executable may be under `build\src\
 - `--fourth`: enable the optional second horizontal display if one exists.
 - `--windowed`: open movable bordered windows rather than borderless screen-filling displays.
 - `--visual led|lines|hybrid`: choose LED segments, smooth curves, or a layered combination (default `lines`).
+- `--engineering`: enable engineering dBFS/frequency-axis legends and exact FFT bucket mouse probes at startup.
+- `--stereo-balance`: enable the independent center-monitor L/R RMS bias meter at startup.
 - `--palette N`: choose color scheme **1–8** (default 4, Prism Rainbow).
 - `--smoothing fast|balanced|liquid`: choose attack/release response (default balanced).
 
@@ -66,6 +68,8 @@ Press **[** and **]** to change the count in increments of 16, or **B** to cycle
 - **M** — toggle center-monitor stereo mirror (default on: bass from both channels meets at the middle)
 - **H** — toggle right portrait monitor frequency mirroring (default on; left portrait unchanged)
 - **V** — cycle LED → Fluid Lines → Hybrid visual styles without restarting capture
+- **E** — toggle Engineering Mode axes and live frequency/dBFS bucket probes
+- **J** — toggle the center stereo balance gauge (separate from Engineering Mode)
 - **[ / ]** — decrease / increase active spectrum bars by 16, clamped to 64–256
 - **B** — cycle through 64, 96, 128, 192 and 256-band presets
 
@@ -92,6 +96,47 @@ Press **H** to independently toggle the right portrait's mirroring. Its bars, pe
 frequency gradients, reflections, and GPU bloom all follow the mirrored X positions.
 The left portrait, center stereo panels, waveforms, VU meters, and audio capture
 remain unchanged by **H**.
+
+## Engineering Mode and stereo balance instrumentation
+
+Both instrumentation layers are **optional and independently switchable**. All
+LED/Fluid Lines/Hybrid palettes and the left/center/right mirror mappings work
+normally with either layer enabled.
+
+- Press **E** for Engineering Mode. The center graph gains a vertically
+  calibrated dBFS axis **up its middle** and frequency bucket scales below
+  **both** mirrored halves. The left and right portrait displays show the same
+  decibel and logarithmic frequency axes, correctly respecting the right
+  portrait mirror toggle.
+- The displayed spectral axis spans **-72 to -2 dBFS**, matching the current
+  normalized visual envelope. Its values refer to the visual range, **not** a
+  calibration of the physical audio input. Tick labels identify the plotted
+  **30 Hz–18 kHz** logarithmic spectrum.
+- Hover your mouse over a channel spectrum to see the nearest **actual FFT
+  bucket number, frequency range in Hz and raw per-band peak dBFS reading**.
+  The probe uses the pre-smoothed Hann-windowed FFT magnitude, *not* the
+  temporally smoothed display height. Due to the current 4096-sample FFT,
+  adjacent display buckets can share FFT bins, particularly at low frequencies.
+- Press **J** to show the **STEREO RMS BIAS** gauge beneath the center
+  waveforms. The pointer slides left for left-channel dominance and right for
+  right-channel dominance, in **dB of overall R/L RMS amplitude ratio**.
+  Zero means both channels carry equal overall RMS energy. Its calibrated
+  visual range is **-18 to +18 dB** with graduated ±6 and ±12 dB ticks;
+  readings outside that scale peg the marker but remain visible numerically.
+  The numeric readout also shows each channel's full-band RMS in dBFS. The
+  display pointer has responsive smoothing, while the number reports the
+  current RMS balance. A silence gate prevents noise from producing wild
+  bias swings. This is a *level-balance* indicator, not stereo phase correlation
+  or stereo width measurement.
+
+Both flags are opt-in and disabled by default:
+
+```powershell
+.\\SpectrumWall.exe --visual hybrid --bands 128 --engineering --stereo-balance
+```
+
+You can activate or deactivate both features live via E and J, without
+reinitializing optical S/PDIF capture.
 
 ## Fluid Lines / Peak Traces
 
