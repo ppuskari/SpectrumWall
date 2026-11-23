@@ -11,3 +11,7 @@ CMakeUserPresets.json
 *.lib
 *.exp
 Thumbs.db
+
+# Local user preferences beside SpectrumWall.exe
+SpectrumWall.ini
+SpectrumWall.ini.tmp
