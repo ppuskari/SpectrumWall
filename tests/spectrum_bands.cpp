@@ -34,6 +34,13 @@ int main() {
         CHECK(visualBandIndex(0, count, true) == count - 1);
         CHECK(visualBandIndex(0, count, false) == 0);
         CHECK(visualBandIndex(count - 1, count, true) == 0);
+        // Left portrait remains low-to-high; right portrait mirrors by default.
+        CHECK(!portraitBandMirrored(true));
+        CHECK(portraitBandMirrored(false));
+        CHECK(!portraitBandMirrored(false, false));
+        CHECK(visualBandIndex(0, count, portraitBandMirrored(true)) == 0);
+        CHECK(visualBandIndex(0, count, portraitBandMirrored(false)) == count - 1);
+        CHECK(visualBandIndex(count - 1, count, portraitBandMirrored(false)) == 0);
     }
 
     SpectrumAnalyzer analyzer;
