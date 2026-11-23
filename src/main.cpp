@@ -4,6 +4,8 @@
 #include <SDL3/SDL.h>
 #include <algorithm>
 #include <array>
+#include <charconv>
+#include <system_error>
 #include <cmath>
 #include <cstdio>
 #include <numbers>
@@ -18,6 +20,8 @@ struct Options {
     bool fourth = false;
     bool windowed = false;
     bool list = false;
+    bool valid = true;
+    std::size_t bands = kDefaultBands;
     std::string source;
 };
 
@@ -31,11 +35,30 @@ Options parse(int argc, char** argv) {
         else if (flag == "--windowed") options.windowed = true;
         else if (flag == "--list-devices") options.list = true;
         else if (flag == "--source" && i + 1 < argc) options.source = argv[++i];
+        else if (flag == "--bands") {
+            if (i + 1 >= argc) {
+                std::fprintf(stderr, "--bands requires a number between 64 and 256.\n");
+                options.valid = false;
+                continue;
+            }
+            const std::string value = argv[++i];
+            int n = 0;
+            const auto [end, err] = std::from_chars(value.data(),
+                                                    value.data() + value.size(), n);
+            if (err != std::errc{} || end != value.data() + value.size() ||
+                n < static_cast<int>(kMinBands) || n > static_cast<int>(kMaxBands)) {
+                std::fprintf(stderr, "Invalid --bands value '%s' (64-256).\n",
+                             value.c_str());
+                options.valid = false;
+            } else {
+                options.bands = static_cast<std::size_t>(n);
+            }
+        }
         else if (flag == "--help" || flag == "-h") {
             std::puts("SpectrumWall [--source TEXT] [--loopback] [--demo]"
-                      " [--fourth] [--windowed] [--list-devices]");
+                      " [--fourth] [--windowed] [--list-devices] [--bands 64..256]");
             std::puts("Keys: Esc/Q quit; N next source; L toggle input/loopback;"
-                      " D demo; 1/2/3 palettes");
+                      " D demo; 1/2/3 palettes; [/] bands +/-16; B cycle presets");
             options.list = true;
         }
     }
@@ -65,6 +88,7 @@ void syntheticStereo(std::array<float, kFFTFrames * 2>& samples, double endSecon
 
 int main(int argc, char** argv) {
     const Options options = parse(argc, argv);
+    if (!options.valid) return 2;
     AudioCapture audio;
     const bool audioAvailable = audio.initialize();
     if (audioAvailable) audio.printEndpoints();
@@ -90,9 +114,11 @@ int main(int argc, char** argv) {
             exitCode = 2;
         } else {
             std::printf("SpectrumWall: %zu active screens. "
-                        "ESC/Q quit | N next audio | L loopback | D demo | 1-3 themes\n",
+                        "ESC/Q quit | N next audio | L loopback | D demo | 1-3 themes | [/] bands | B presets\n",
                         wall.screenCount());
-            SpectrumAnalyzer analyzer;
+            SpectrumAnalyzer analyzer(options.bands);
+            std::printf("Spectrum resolution: %zu active bands (4096-point FFT).\n",
+                        analyzer.bandCount());
             std::array<float, kFFTFrames * 2> samples{};
             bool running = true;
             int theme = 0;
@@ -127,6 +153,27 @@ int main(int argc, char** argv) {
                     case SDLK_1: theme = 0; break;
                     case SDLK_2: theme = 1; break;
                     case SDLK_3: theme = 2; break;
+                    case SDLK_LEFTBRACKET:
+                        analyzer.setBandCount(std::max(kMinBands,
+                            analyzer.bandCount() > kMinBands + kBandStep
+                                ? analyzer.bandCount() - kBandStep : kMinBands));
+                        std::printf("\nSpectrum: %zu bands\n", analyzer.bandCount());
+                        break;
+                    case SDLK_RIGHTBRACKET:
+                        analyzer.setBandCount(std::min(kMaxBands,
+                            analyzer.bandCount() + kBandStep));
+                        std::printf("\nSpectrum: %zu bands\n", analyzer.bandCount());
+                        break;
+                    case SDLK_B: {
+                        constexpr std::array<std::size_t, 5> presets = {
+                            64, 96, 128, 192, 256
+                        };
+                        const auto it = std::upper_bound(presets.begin(),
+                                                         presets.end(), analyzer.bandCount());
+                        analyzer.setBandCount(it == presets.end() ? presets.front() : *it);
+                        std::printf("\nSpectrum: %zu bands\n", analyzer.bandCount());
+                        break;
+                    }
                     default: break;
                     }
                 }
