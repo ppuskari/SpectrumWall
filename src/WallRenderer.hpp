@@ -13,6 +13,10 @@ struct ScreenWindow {
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
     SDL_Rect bounds{};
+    SDL_Texture* glowTarget = nullptr;
+    int glowWidth = 0;
+    int glowHeight = 0;
+    bool glowUnsupported = false;
 };
 
 class WallRenderer {
@@ -22,11 +26,30 @@ public:
     WallRenderer(const WallRenderer&) = delete;
     WallRenderer& operator=(const WallRenderer&) = delete;
     bool initialize(bool enableFourth, bool windowed);
-    void draw(const VisualState& state, int theme);
+    void draw(const VisualState& state, int palette, float dt,
+              SmoothingMode smoothing = SmoothingMode::Balanced);
+    void cycleGlow() { glowMode_ = (glowMode_ + 1) % 3; }
+    int glowMode() const { return glowMode_; }
+    void toggleTrails() { trailsEnabled_ = !trailsEnabled_; }
+    bool trailsEnabled() const { return trailsEnabled_; }
+    void toggleReflections() { reflectionsEnabled_ = !reflectionsEnabled_; }
+    bool reflectionsEnabled() const { return reflectionsEnabled_; }
+    void toggleParticles() { particlesEnabled_ = !particlesEnabled_; }
+    bool particlesEnabled() const { return particlesEnabled_; }
     std::size_t screenCount() const { return screens_.size(); }
 
 private:
-    void drawScreen(const ScreenWindow& screen, const VisualState& state, int theme);
+    void drawScreen(ScreenWindow& screen, const VisualState& state, int palette,
+                    SmoothingMode smoothing);
+    void drawBloom(ScreenWindow& screen, float w, float h, const VisualState& state,
+                   int palette);
+    void drawGlowBars(SDL_Renderer* r, SDL_FRect plot,
+                      const std::array<float, kMaxBands>& values,
+                      std::size_t bands, int palette, bool right);
+    void drawReflections(SDL_Renderer* r, SDL_FRect plot,
+                         const std::array<float, kMaxBands>& values,
+                         std::size_t bands, int palette, bool right);
+    void drawParticles(SDL_Renderer* r, float w, float h, float pulse, int palette);
     void drawPortrait(SDL_Renderer* r, float w, float h,
                       const VisualState& state, bool left, int theme);
     void drawCenter(SDL_Renderer* r, float w, float h,
@@ -36,7 +59,8 @@ private:
     void drawSpectrum(SDL_Renderer* r, SDL_FRect rect,
                       const std::array<float, kMaxBands>& values,
                       const std::array<float, kMaxBands>& peaks,
-                      std::size_t bands, int theme);
+                      const std::array<float, kMaxBands>& trails,
+                      std::size_t bands, int palette, bool right);
     void drawWave(SDL_Renderer* r, SDL_FRect rect,
                   const std::array<float, kWavePoints>& samples, SDL_Color color);
     void drawLevel(SDL_Renderer* r, SDL_FRect rect, float rms,
@@ -44,5 +68,12 @@ private:
     std::vector<ScreenWindow> screens_;
     std::deque<std::array<float, kMaxBands>> history_;
     std::size_t historyBandCount_ = 0;
+    std::array<float, kMaxBands> afterglowLeft_{};
+    std::array<float, kMaxBands> afterglowRight_{};
+    float latestPulse_ = 0.0f;
+    int glowMode_ = 2; // 0 off, 1 soft, 2 vivid
+    bool trailsEnabled_ = true;
+    bool reflectionsEnabled_ = true;
+    bool particlesEnabled_ = true;
 };
 } // namespace spectrum
