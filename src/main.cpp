@@ -113,14 +113,14 @@ int main(int argc, char** argv) {
                     if (event.type != SDL_EVENT_KEY_DOWN || event.key.repeat) continue;
                     switch (event.key.key) {
                     case SDLK_ESCAPE:
-                    case SDLK_q: running = false; break;
-                    case SDLK_n:
+                    case SDLK_Q: running = false; break;
+                    case SDLK_N:
                         if (audioAvailable && audio.next()) demo = false;
                         break;
-                    case SDLK_l:
+                    case SDLK_L:
                         if (audioAvailable && audio.toggleCaptureLoopback()) demo = false;
                         break;
-                    case SDLK_d:
+                    case SDLK_D:
                         demo = !demo;
                         std::printf("\nDemo mode: %s\n", demo ? "ON" : "OFF");
                         break;
