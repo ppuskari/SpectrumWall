@@ -22,6 +22,8 @@ struct Options {
     bool list = false;
     bool valid = true;
     std::size_t bands = kDefaultBands;
+    int palette = 3; // Prism Rainbow: all frequencies visibly color-coded
+    SmoothingMode smoothing = SmoothingMode::Balanced;
     std::string source;
 };
 
@@ -35,6 +37,31 @@ Options parse(int argc, char** argv) {
         else if (flag == "--windowed") options.windowed = true;
         else if (flag == "--list-devices") options.list = true;
         else if (flag == "--source" && i + 1 < argc) options.source = argv[++i];
+        else if (flag == "--palette" && i + 1 < argc) {
+            const std::string value = argv[++i];
+            int n = 0;
+            const auto [end, err] = std::from_chars(value.data(),
+                                                    value.data() + value.size(), n);
+            if (err != std::errc{} || end != value.data() + value.size() ||
+                n < 1 || n > 8) {
+                std::fprintf(stderr, "Invalid --palette value '%s' (1-8).\n",
+                             value.c_str());
+                options.valid = false;
+            } else {
+                options.palette = n - 1;
+            }
+        }
+        else if (flag == "--smoothing" && i + 1 < argc) {
+            const std::string mode = argv[++i];
+            if (mode == "fast") options.smoothing = SmoothingMode::Fast;
+            else if (mode == "balanced") options.smoothing = SmoothingMode::Balanced;
+            else if (mode == "liquid") options.smoothing = SmoothingMode::Liquid;
+            else {
+                std::fprintf(stderr, "Unknown --smoothing '%s' (fast/balanced/liquid).\n",
+                             mode.c_str());
+                options.valid = false;
+            }
+        }
         else if (flag == "--bands") {
             if (i + 1 >= argc) {
                 std::fprintf(stderr, "--bands requires a number between 64 and 256.\n");
@@ -56,9 +83,11 @@ Options parse(int argc, char** argv) {
         }
         else if (flag == "--help" || flag == "-h") {
             std::puts("SpectrumWall [--source TEXT] [--loopback] [--demo]"
-                      " [--fourth] [--windowed] [--list-devices] [--bands 64..256]");
+                      " [--fourth] [--windowed] [--list-devices] [--bands 64..256]"
+                      " [--palette 1..8] [--smoothing fast|balanced|liquid]");
             std::puts("Keys: Esc/Q quit; N next source; L toggle input/loopback;"
-                      " D demo; 1/2/3 palettes; [/] bands +/-16; B cycle presets");
+                      " D demo; 1..8/C palette; S smoothing; F frequency soften;"
+                      " G glow; T trails; R reflections; P particles; [/] bands; B presets");
             options.list = true;
         }
     }
@@ -114,16 +143,22 @@ int main(int argc, char** argv) {
             exitCode = 2;
         } else {
             std::printf("SpectrumWall: %zu active screens. "
-                        "ESC/Q quit | N next audio | L loopback | D demo | 1-3 themes | [/] bands | B presets\n",
+                        "ESC/Q quit | N next audio | L loopback | D demo | 1-8 palettes |"
+                        " S smoothing | F soften | G glow | T trails | R reflections |"
+                        " P particles | [/] bands | B presets\n",
                         wall.screenCount());
             SpectrumAnalyzer analyzer(options.bands);
+            analyzer.setSmoothingMode(options.smoothing);
             std::printf("Spectrum resolution: %zu active bands (4096-point FFT).\n",
                         analyzer.bandCount());
             std::array<float, kFFTFrames * 2> samples{};
             bool running = true;
-            int theme = 0;
+            int theme = options.palette;
             Uint64 lastFrame = SDL_GetTicksNS();
             Uint64 lastStats = lastFrame;
+            unsigned frameCounter = 0;
+            std::printf("Palette: %s. Smoothing: %s.\n",
+                        paletteName(theme), smoothingModeName(analyzer.smoothingMode()));
 
             while (running) {
                 const Uint64 frameBegin = SDL_GetTicksNS();
@@ -153,6 +188,50 @@ int main(int argc, char** argv) {
                     case SDLK_1: theme = 0; break;
                     case SDLK_2: theme = 1; break;
                     case SDLK_3: theme = 2; break;
+                    case SDLK_4: theme = 3; break;
+                    case SDLK_5: theme = 4; break;
+                    case SDLK_6: theme = 5; break;
+                    case SDLK_7: theme = 6; break;
+                    case SDLK_8: theme = 7; break;
+                    case SDLK_C:
+                        theme = (theme + 1) % kPaletteCount;
+                        std::printf("\nPalette: %s\n", paletteName(theme));
+                        break;
+                    case SDLK_S: {
+                        const auto current = analyzer.smoothingMode();
+                        const auto next = current == SmoothingMode::Fast
+                            ? SmoothingMode::Balanced :
+                            current == SmoothingMode::Balanced
+                            ? SmoothingMode::Liquid : SmoothingMode::Fast;
+                        analyzer.setSmoothingMode(next);
+                        std::printf("\nTemporal smoothing: %s\n", smoothingModeName(next));
+                        break;
+                    }
+                    case SDLK_F:
+                        analyzer.setSpectralSoftening(!analyzer.spectralSoftening());
+                        std::printf("\nFrequency softening: %s\n",
+                                    analyzer.spectralSoftening() ? "ON" : "OFF");
+                        break;
+                    case SDLK_G:
+                        wall.cycleGlow();
+                        std::printf("\nGPU glow: %d (0 off, 1 soft, 2 vivid)\n",
+                                    wall.glowMode());
+                        break;
+                    case SDLK_T:
+                        wall.toggleTrails();
+                        std::printf("\nLED afterglow: %s\n",
+                                    wall.trailsEnabled() ? "ON" : "OFF");
+                        break;
+                    case SDLK_R:
+                        wall.toggleReflections();
+                        std::printf("\nLED reflections: %s\n",
+                                    wall.reflectionsEnabled() ? "ON" : "OFF");
+                        break;
+                    case SDLK_P:
+                        wall.toggleParticles();
+                        std::printf("\nReactive particles: %s\n",
+                                    wall.particlesEnabled() ? "ON" : "OFF");
+                        break;
                     case SDLK_LEFTBRACKET:
                         analyzer.setBandCount(std::max(kMinBands,
                             analyzer.bandCount() > kMinBands + kBandStep
@@ -183,13 +262,18 @@ int main(int argc, char** argv) {
                     samples.fill(0.0f);
                 }
                 analyzer.update(samples, dt);
-                wall.draw(analyzer.state(), theme);
+                wall.draw(analyzer.state(), theme, dt, analyzer.smoothingMode());
+                ++frameCounter;
 
                 if (frameBegin - lastStats > 1000000000ULL) {
                     const auto& s = analyzer.state();
-                    std::printf("\rL %6.1f dBFS  R %6.1f dBFS | %s | %s      ",
+                    const float fps = frameCounter * (1.0e9f /
+                        static_cast<float>(frameBegin - lastStats));
+                    std::printf("\rL %6.1f dBFS R %6.1f dBFS | %zu bands | %.1f FPS | %s | %s      ",
                                 toDb(s.peakLeft), toDb(s.peakRight),
-                                demo ? "DEMO" : "LIVE", audio.currentName().c_str());
+                                s.bandCount, fps, demo ? "DEMO" : "LIVE",
+                                audio.currentName().c_str());
+                    frameCounter = 0;
                     std::fflush(stdout);
                     lastStats = frameBegin;
                 }
