@@ -331,6 +331,11 @@ void WallRenderer::drawScreen(ScreenWindow& screen, const VisualState& state,
     case ScreenRole::Center: drawCenter(r, w, h, state, theme); break;
     case ScreenRole::Waterfall: drawWaterfall(r, w, h, state.bandCount, theme); break;
     }
+    if (engineeringEnabled_)
+        drawEngineeringOverlay(screen, state, w, h);
+    if (screen.role == ScreenRole::Center && stereoBalanceEnabled_)
+        drawStereoBalance(r, w, h, state);
+
     // Minimal hardware-accelerated OSD confirms live band changes in fullscreen.
     SDL_SetRenderDrawColor(r, 192, 224, 232, 235);
     SDL_SetRenderScale(r, 2.0f, 2.0f);
@@ -342,6 +347,10 @@ void WallRenderer::drawScreen(ScreenWindow& screen, const VisualState& state,
     if (screen.role == ScreenRole::Right)
         SDL_RenderDebugTextFormat(r, 8.0f, 18.0f, "RIGHT PORTRAIT MIRROR: %s",
                                   rightPortraitMirror_ ? "ON" : "OFF");
+    if (engineeringEnabled_)
+        SDL_RenderDebugTextFormat(r, 8.0f, 29.0f, "ENGINEERING: dBFS / LOG Hz");
+    if (screen.role == ScreenRole::Center && stereoBalanceEnabled_)
+        SDL_RenderDebugText(r, 8.0f, 40.0f, "STEREO RMS BALANCE: ON");
     SDL_SetRenderScale(r, 1.0f, 1.0f);
     SDL_RenderPresent(r);
 }
