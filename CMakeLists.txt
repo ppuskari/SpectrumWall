@@ -25,6 +25,7 @@ add_executable(SpectrumWall
     src/WallEffects.cpp
     src/WallLines.cpp
     src/EngineeringOverlay.cpp
+    src/ShortcutHelp.cpp
     src/SettingsStore.cpp
 )
 target_include_directories(SpectrumWall PRIVATE src "${miniaudio_SOURCE_DIR}")
