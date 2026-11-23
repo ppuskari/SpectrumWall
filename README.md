@@ -63,6 +63,7 @@ Press **[** and **]** to change the count in increments of 16, or **B** to cycle
 - **R** — toggle reflected light below the frequency bars
 - **P** — toggle bass-reactive drifting particles
 - **M** — toggle center-monitor stereo mirror (default on: bass from both channels meets at the middle)
+- **H** — toggle right portrait monitor frequency mirroring (default on; left portrait unchanged)
 - **[ / ]** — decrease / increase active spectrum bars by 16, clamped to 64–256
 - **B** — cycle through 64, 96, 128, 192 and 256-band presets
 
@@ -76,13 +77,19 @@ the right channel remains low-to-high from the center toward the outside:
 
 `TREBLE ← LEFT CHANNEL ← BASS | BASS → RIGHT CHANNEL → TREBLE`
 
-Both low-frequency sections meet at the center divide. The two portrait displays retain
-their original low-to-high frequency orientation. This is **rendering-only**:
+Both low-frequency sections meet at the center divide. The left portrait display retains
+its original low-to-high frequency orientation; the right portrait now mirrors its
+frequency axis to high-to-low by default, matching the opposite screen's symmetrical look.
+This is **rendering-only**:
 FFT bins, stereo levels, waveforms, peak tracking, colors and optical recording remain
 unchanged. The left half's glow, reflections and animated peak indicators are mirrored
 with the bars, keeping all effects spatially aligned.
 
 Press **M** to switch between mirrored and original center layouts live.
+Press **H** to independently toggle the right portrait's mirroring. Its bars, peak hold,
+frequency gradients, reflections, and GPU bloom all follow the mirrored X positions.
+The left portrait, center stereo panels, waveforms, VU meters, and audio capture
+remain unchanged by **H**.
 
 ## Eye-candy release
 
