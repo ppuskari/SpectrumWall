@@ -196,9 +196,11 @@ void WallRenderer::drawWave(SDL_Renderer* r, SDL_FRect plot,
         const float x1 = plot.x + i * plot.w / (kWavePoints - 1);
         const float y0 = middle - std::clamp(samples[i - 1], -1.0f, 1.0f) * plot.h * 0.43f;
         const float y1 = middle - std::clamp(samples[i], -1.0f, 1.0f) * plot.h * 0.43f;
-        SDL_Color halo = color; halo.a = 50;
-        line(r, x0, y0 - 2, x1, y1 - 2, halo);
-        line(r, x0, y0 + 2, x1, y1 + 2, halo);
+        if (glowMode_) {
+            SDL_Color halo = color; halo.a = glowMode_ == 2 ? 45 : 22;
+            for (float d : {-4.0f, -2.0f, 2.0f, 4.0f})
+                line(r, x0, y0 + d, x1, y1 + d, halo);
+        }
         line(r, x0, y0, x1, y1, color);
     }
 }
@@ -212,7 +214,7 @@ void WallRenderer::drawLevel(SDL_Renderer* r, SDL_FRect plot, float rms,
     for (int i = 0; i < segments; ++i) {
         const float f = static_cast<float>(i + 1) / segments;
         rect(r, {plot.x + i * step, plot.y, step * 0.86f, plot.h},
-             colorFor(f, f <= level, theme));
+             colorFor(f, f, level, f <= level, theme));
     }
     rect(r, { plot.x + peakPos * plot.w - 2.0f, plot.y - 2.0f, 4.0f, plot.h + 4.0f },
          peak > 0.99f ? SDL_Color{255, 40, 44, 255}
@@ -230,7 +232,10 @@ void WallRenderer::drawPortrait(SDL_Renderer* r, float w, float h,
     const auto& values = left ? state.left : state.right;
     const auto& peaks = left ? state.leftPeaks : state.rightPeaks;
     drawSpectrum(r, {pad, h * 0.06f, w - 2 * pad, h * 0.75f},
-                 values, peaks, state.bandCount, theme);
+                 values, peaks, left ? afterglowLeft_ : afterglowRight_,
+                 state.bandCount, theme, !left);
+    drawReflections(r, {pad, h * 0.06f, w - 2 * pad, h * 0.75f},
+                    values, state.bandCount, theme, !left);
     drawWave(r, {pad, h * 0.84f, w - 2 * pad, h * 0.07f},
              left ? state.waveLeft : state.waveRight,
              left ? SDL_Color{ 63, 226, 232, 255 } : SDL_Color{ 228, 112, 249, 255 });
@@ -245,9 +250,15 @@ void WallRenderer::drawCenter(SDL_Renderer* r, float w, float h,
     const float width = w - 2 * pad;
     const float half = width * 0.495f;
     drawSpectrum(r, {pad, h * 0.055f, half, h * 0.55f},
-                 state.left, state.leftPeaks, state.bandCount, theme);
+                 state.left, state.leftPeaks, afterglowLeft_,
+                 state.bandCount, theme, false);
+    drawReflections(r, {pad, h * 0.055f, half, h * 0.55f},
+                    state.left, state.bandCount, theme, false);
     drawSpectrum(r, {pad + width * 0.505f, h * 0.055f, half, h * 0.55f},
-                 state.right, state.rightPeaks, state.bandCount, theme);
+                 state.right, state.rightPeaks, afterglowRight_,
+                 state.bandCount, theme, true);
+    drawReflections(r, {pad + width * 0.505f, h * 0.055f, half, h * 0.55f},
+                    state.right, state.bandCount, theme, true);
     line(r, w * 0.5f, h * 0.045f, w * 0.5f, h * 0.61f,
          { 40, 70, 88, 200 });
     drawWave(r, {pad, h * 0.65f, width, h * 0.115f}, state.waveLeft,
