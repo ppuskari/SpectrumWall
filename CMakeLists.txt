@@ -25,6 +25,7 @@ add_executable(SpectrumWall
     src/WallEffects.cpp
     src/WallLines.cpp
     src/EngineeringOverlay.cpp
+    src/SettingsStore.cpp
 )
 target_include_directories(SpectrumWall PRIVATE src "${miniaudio_SOURCE_DIR}")
 target_link_libraries(SpectrumWall PRIVATE SDL3::SDL3)
@@ -53,6 +54,7 @@ if(BUILD_TESTING)
     add_executable(SpectrumWallBandTests
         tests/spectrum_bands.cpp
         src/SpectrumAnalyzer.cpp
+        src/SettingsStore.cpp
     )
     target_include_directories(SpectrumWallBandTests PRIVATE src "${miniaudio_SOURCE_DIR}")
     if(WIN32)
