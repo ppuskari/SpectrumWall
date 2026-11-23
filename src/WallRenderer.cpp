@@ -272,7 +272,7 @@ void WallRenderer::drawCenter(SDL_Renderer* r, float w, float h,
 }
 
 void WallRenderer::drawWaterfall(SDL_Renderer* r, float w, float h,
-                                 std::size_t bands, int) {
+                                 std::size_t bands, int theme) {
     const float pad = std::max(18.0f, w * 0.016f);
     const float width = w - 2 * pad, height = h - 2 * pad;
     if (history_.empty()) return;
@@ -284,7 +284,7 @@ void WallRenderer::drawWaterfall(SDL_Renderer* r, float w, float h,
             const float strength = std::clamp(frame[band], 0.0f, 1.0f);
             const float freq = static_cast<float>(band) /
                                static_cast<float>(bands - 1);
-            const Rgb tint = paletteRgb(freq, strength, strength, 3);
+            const Rgb tint = paletteRgb(freq, strength, strength, theme);
             const float light = 0.13f + strength * 0.87f;
             rect(r, {pad + band * cellW, pad + row * cellH, cellW + 0.25f,
                      cellH + 0.25f},
