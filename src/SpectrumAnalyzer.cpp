@@ -14,6 +14,15 @@ float normalized(float linear) {
 }
 }
 
+const char* smoothingModeName(SmoothingMode mode) {
+    switch (mode) {
+    case SmoothingMode::Fast: return "FAST";
+    case SmoothingMode::Balanced: return "BALANCED";
+    case SmoothingMode::Liquid: return "LIQUID";
+    }
+    return "BALANCED";
+}
+
 float toDb(float linear) {
     return 20.0f * std::log10(std::max(0.00000001f, linear));
 }
@@ -107,6 +116,22 @@ void SpectrumAnalyzer::update(const std::array<float, kFFTFrames * 2>& input, fl
     transform(0, input, newLeft);
     transform(1, input, newRight);
 
+    // Display-domain frequency smoothing. This does not invent FFT resolution:
+    // it simply avoids jagged adjacent bar heights while retaining channel separation.
+    if (spectralSoftening_) {
+        auto soften = [this](std::array<float, kMaxBands>& values) {
+            const auto original = values;
+            for (std::size_t i = 0; i < state_.bandCount; ++i) {
+                const auto lo = i > 0 ? i - 1 : i;
+                const auto hi = std::min(i + 1, state_.bandCount - 1);
+                values[i] = original[i] * 0.70f +
+                            (original[lo] + original[hi]) * 0.15f;
+            }
+        };
+        soften(newLeft);
+        soften(newRight);
+    }
+
     float sumLeft = 0.0f, sumRight = 0.0f;
     float pkLeft = 0.0f, pkRight = 0.0f;
     for (std::size_t i = 0; i < kFFTFrames; ++i) {
@@ -121,12 +146,24 @@ void SpectrumAnalyzer::update(const std::array<float, kFFTFrames * 2>& input, fl
     state_.peakLeft = pkLeft;
     state_.peakRight = pkRight;
 
-    const float vuAlpha = 1.0f - std::exp(-dt / 0.3f);
+    // Frame-rate independent time constants, not arbitrary per-frame smoothing.
+    float attackSeconds = 0.028f, releaseSeconds = 0.24f;
+    float peakHoldSeconds = 0.38f, vuSeconds = 0.30f;
+    switch (smoothingMode_) {
+    case SmoothingMode::Fast:
+        attackSeconds = 0.010f; releaseSeconds = 0.105f;
+        peakHoldSeconds = 0.22f; vuSeconds = 0.20f; break;
+    case SmoothingMode::Liquid:
+        attackSeconds = 0.060f; releaseSeconds = 0.50f;
+        peakHoldSeconds = 0.62f; vuSeconds = 0.42f; break;
+    case SmoothingMode::Balanced: break;
+    }
+    const float vuAlpha = 1.0f - std::exp(-dt / vuSeconds);
     state_.vuLeft += (normalized(state_.rmsLeft) - state_.vuLeft) * vuAlpha;
     state_.vuRight += (normalized(state_.rmsRight) - state_.vuRight) * vuAlpha;
 
-    const float attack = 1.0f - std::exp(-dt / 0.025f);
-    const float release = 1.0f - std::exp(-dt / 0.2f);
+    const float attack = 1.0f - std::exp(-dt / attackSeconds);
+    const float release = 1.0f - std::exp(-dt / releaseSeconds);
     for (std::size_t i = 0; i < state_.bandCount; ++i) {
         auto smooth = [attack, release](float old, float current) {
             return old + (current - old) * (current > old ? attack : release);
@@ -134,10 +171,10 @@ void SpectrumAnalyzer::update(const std::array<float, kFFTFrames * 2>& input, fl
         state_.left[i] = smooth(state_.left[i], newLeft[i]);
         state_.right[i] = smooth(state_.right[i], newRight[i]);
 
-        auto peak = [dt](float current, float& held, float& remaining) {
+        auto peak = [dt, peakHoldSeconds](float current, float& held, float& remaining) {
             if (current >= held) {
                 held = current;
-                remaining = 0.35f;
+                remaining = peakHoldSeconds;
             } else if (remaining > 0.0f) {
                 remaining = std::max(0.0f, remaining - dt);
             } else {
