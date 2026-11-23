@@ -55,11 +55,21 @@ public:
     void toggleRightPortraitMirror() { rightPortraitMirror_ = !rightPortraitMirror_; }
     bool rightPortraitMirrored() const { return rightPortraitMirror_; }
     bool particlesEnabled() const { return particlesEnabled_; }
+    void toggleEngineering() { engineeringEnabled_ = !engineeringEnabled_; }
+    bool engineeringEnabled() const { return engineeringEnabled_; }
+    void setEngineering(bool enabled) { engineeringEnabled_ = enabled; }
+    void toggleStereoBalance() { stereoBalanceEnabled_ = !stereoBalanceEnabled_; }
+    bool stereoBalanceEnabled() const { return stereoBalanceEnabled_; }
+    void setStereoBalance(bool enabled) { stereoBalanceEnabled_ = enabled; }
     std::size_t screenCount() const { return screens_.size(); }
 
 private:
     void drawScreen(ScreenWindow& screen, const VisualState& state, int palette,
                     SmoothingMode smoothing);
+    void drawEngineeringOverlay(const ScreenWindow& screen,
+                                const VisualState& state, float w, float h);
+    void drawStereoBalance(SDL_Renderer* renderer, float w, float h,
+                           const VisualState& state);
     void drawBloom(ScreenWindow& screen, float w, float h, const VisualState& state,
                    int palette);
     void drawGlowBars(SDL_Renderer* r, SDL_FRect plot,
@@ -113,5 +123,7 @@ private:
     bool centerMirror_ = true;
     bool rightPortraitMirror_ = true;
     SpectrumStyle spectrumStyle_ = SpectrumStyle::Lines;
+    bool engineeringEnabled_ = false;
+    bool stereoBalanceEnabled_ = false;
 };
 } // namespace spectrum
