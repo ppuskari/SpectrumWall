@@ -144,8 +144,8 @@ SessionSettings readSessionSettings(const std::filesystem::path& filename,
 
 bool writeSessionSettings(const std::filesystem::path& filename,
                           const SessionSettings& settings) {
-    const std::filesystem::path temporary =
-        std::filesystem::path(filename.wstring() + L".tmp");
+    std::filesystem::path temporary = filename;
+    temporary += ".tmp";
     {
         std::ofstream output(temporary, std::ios::binary | std::ios::trunc);
         if (!output) return false;
