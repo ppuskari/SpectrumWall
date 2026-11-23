@@ -1,4 +1,5 @@
 #include "SpectrumAnalyzer.hpp"
+#include "VisualStyle.hpp"
 #include <array>
 
 #include <cmath>
@@ -69,6 +70,17 @@ int main() {
     CHECK(quick.smoothingMode() == SmoothingMode::Fast);
     CHECK(fluid.smoothingMode() == SmoothingMode::Liquid);
     CHECK(smoothingModeName(SmoothingMode::Liquid)[0] == 'L');
+
+    for (int palette = 0; palette < kPaletteCount; ++palette) {
+        const Rgb bass = paletteRgb(0.05f, 0.2f, 0.9f, palette, false);
+        const Rgb treble = paletteRgb(0.95f, 0.8f, 0.9f, palette, true);
+        CHECK(bass.r != treble.r || bass.g != treble.g ||
+              bass.b != treble.b);
+        CHECK(paletteName(palette)[0] != '\0');
+    }
+    CHECK(hsvToRgb(0.0f, 1.0f, 1.0f).r == 255);
+    CHECK(hsvToRgb(120.0f, 1.0f, 1.0f).g == 255);
+    CHECK(hsvToRgb(240.0f, 1.0f, 1.0f).b == 255);
 
     analyzer.setBandCount(1);
     CHECK(analyzer.bandCount() == kMinBands);
