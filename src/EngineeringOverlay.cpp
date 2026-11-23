@@ -7,7 +7,6 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
-#include <cmath>
 
 namespace spectrum {
 namespace {
