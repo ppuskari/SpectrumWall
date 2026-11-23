@@ -201,7 +201,7 @@ int main(int argc, char** argv) {
     }
     const Options options = parse(argc, argv, initial);
     if (!options.valid) return 2;
-    std::printf("SpectrumWall config: %s (%s)\\n",
+    std::printf("SpectrumWall config: %s (%s)\n",
                 settingsPath.string().c_str(),
                 ignoreSaved ? "defaults requested" :
                 loaded ? "restored" : "defaults, save on exit");
@@ -433,12 +433,12 @@ int main(int argc, char** argv) {
                 finalSettings.source = audio.active()
                     ? audio.currentName() : options.source;
                 if (writeSessionSettings(settingsPath, finalSettings))
-                    std::printf("\\nSaved SpectrumWall preferences: %s\\n",
+                    std::printf("\nSaved SpectrumWall preferences: %s\n",
                                 settingsPath.string().c_str());
                 else
                     std::fprintf(stderr,
-                        "\\nCannot save SpectrumWall.ini beside the executable; "
-                        "check folder permissions.\\n");
+                        "\nCannot save SpectrumWall.ini beside the executable; "
+                        "check folder permissions.\n");
             }
             std::puts("\nSpectrumWall shutdown.");
         }
