@@ -34,6 +34,8 @@ Depending on your CMake/vcpkg generator, the executable may be under `build\src\
 - `--demo`: use synthetic stereo audio for visual testing.
 - `--fourth`: enable the optional second horizontal display if one exists.
 - `--windowed`: open movable bordered windows rather than borderless screen-filling displays.
+- `--palette N`: choose color scheme **1–8** (default 4, Prism Rainbow).
+- `--smoothing fast|balanced|liquid`: choose attack/release response (default balanced).
 
 ### Live spectrum density
 
@@ -52,11 +54,44 @@ Press **[** and **]** to change the count in increments of 16, or **B** to cycle
 - **N** — next capture or loopback device in the current category
 - **L** — toggle between capture sources and playback loopbacks
 - **D** — toggle the synthetic audio test pattern
-- **1 / 2 / 3** — switch between Classic, Neon and Amber LED palettes
+- **1–8** — Classic Hi-Fi, Neon Nights, Golden Amber, Prism Rainbow, Aurora, Inferno, Ice Blue or Vintage Phosphor
+- **C** — cycle all eight color schemes
+- **S** — cycle Fast / Balanced / Liquid temporal smoothing
+- **F** — toggle light frequency-neighbor smoothing (visual only)
+- **G** — cycle GPU glow Off / Soft / Vivid
+- **T** — toggle fading LED afterglow trails
+- **R** — toggle reflected light below the frequency bars
+- **P** — toggle bass-reactive drifting particles
 - **[ / ]** — decrease / increase active spectrum bars by 16, clamped to 64–256
 - **B** — cycle through 64, 96, 128, 192 and 256-band presets
 
 The application prints available audio endpoints and the currently selected source to the console. An eventual in-app control panel and persistent monitor mapping are tracked for future releases.
+
+## Eye-candy release
+
+This edition adds two independent types of smoothing: temporal attack/release profiles
+(Fast: punchy, Balanced: responsive, Liquid: flowing) and optional display-domain
+three-tap frequency smoothing. Neither alters the optical TOSLINK input or stereo RMS/peak
+measurements. A longer FFT is a separate future feature; smoothing does not
+create frequency resolution not present in the 4096-point FFT.
+
+The spectrum gains dynamic frequency-and-height-sensitive HSV color gradients,
+36 LED segments per band, bright peak glints, afterglow decay, reflected LEDs,
+color-matched scrolling waterfall, and an optional multi-pass GPU bloom layer
+using one low-resolution render-target texture per monitor (SDL3 additive compositing).
+If a graphics renderer cannot create the bloom target, the LED rendering continues
+without that pass. Effect features can be toggled live. The console reports
+the actual rendered FPS for multi-monitor RX 580 performance assessment.
+
+Example launch on your a2fpga Realtek optical input:
+
+```powershell
+.\\SpectrumWall.exe --bands 128 --palette 4 --smoothing balanced
+.\\SpectrumWall.exe --bands 192 --palette 5 --smoothing liquid --windowed
+```
+
+**The Windows ZIP is a portable executable and SDL3.dll, not an installer.**
+Extract them together. In fullscreen, press Esc or Q to close.
 
 ## Architecture
 
@@ -66,7 +101,7 @@ A single stereo capture path feeds a rolling PCM ring buffer. FFT, peaks and RMS
 
 - No hardware is needed to test `--demo`.
 - The underlying Realtek recording endpoint must appear and be enabled in Windows Sound settings. S/PDIF **output** does not serve as an input.
-- SDL3 uses the OS-selected GPU renderer (often D3D11/12 on Windows). Shader bloom, persistent trails and a graphical device chooser are future enhancements.
+- SDL3 uses the OS-selected GPU renderer (often D3D11/12 on Windows). Native GLSL shaders and a graphical device chooser are future enhancements; current glow uses SDL3 GPU render targets, and LED afterglow is implemented.
 - Rendering on all connected displays is not yet performance-benchmarked or tested on the target multi-monitor RX 580 system.
 - The first program uses a small mutex-protected PCM ring; it should eventually be replaced by a lock-free audio transport for stronger hard real-time behavior.
 
