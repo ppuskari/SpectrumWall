@@ -84,7 +84,7 @@ private:
                             const std::array<float, kMaxBands>& peaks,
                             const std::array<float, kMaxBands>& trails,
                             std::size_t bands, int palette, bool right,
-                            bool mirror);
+                            bool mirror = false);
     void drawPortrait(SDL_Renderer* r, float w, float h,
                       const VisualState& state, bool left, int theme);
     void drawCenter(SDL_Renderer* r, float w, float h,
