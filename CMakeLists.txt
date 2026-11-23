@@ -22,6 +22,7 @@ add_executable(SpectrumWall
     src/AudioCapture.cpp
     src/SpectrumAnalyzer.cpp
     src/WallRenderer.cpp
+    src/WallEffects.cpp
 )
 target_include_directories(SpectrumWall PRIVATE src "${miniaudio_SOURCE_DIR}")
 target_link_libraries(SpectrumWall PRIVATE SDL3::SDL3)
