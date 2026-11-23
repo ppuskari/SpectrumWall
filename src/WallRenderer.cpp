@@ -143,14 +143,15 @@ bool WallRenderer::initialize(bool enableFourth, bool windowed) {
 }
 
 void WallRenderer::drawSpectrum(SDL_Renderer* r, SDL_FRect plot,
-                                const std::array<float, kBands>& values,
-                                const std::array<float, kBands>& peaks, int theme) {
+                                const std::array<float, kMaxBands>& values,
+                                const std::array<float, kMaxBands>& peaks,
+                                std::size_t bands, int theme) {
     constexpr int segments = 32;
-    const float step = plot.w / static_cast<float>(kBands);
+    const float step = plot.w / static_cast<float>(bands);
     const float segmentH = plot.h / static_cast<float>(segments);
-    const float ledWidth = std::max(1.0f, step - std::max(1.5f, step * 0.14f));
+    const float ledWidth = std::max(0.4f, step * 0.84f);
     const float ledHeight = std::max(1.0f, segmentH - std::max(1.0f, segmentH * 0.14f));
-    for (std::size_t b = 0; b < kBands; ++b) {
+    for (std::size_t b = 0; b < bands; ++b) {
         const float x = plot.x + step * static_cast<float>(b);
         for (int s = 0; s < segments; ++s) {
             const float fraction = static_cast<float>(s + 1) / segments;
@@ -213,7 +214,7 @@ void WallRenderer::drawPortrait(SDL_Renderer* r, float w, float h,
     const auto& values = left ? state.left : state.right;
     const auto& peaks = left ? state.leftPeaks : state.rightPeaks;
     drawSpectrum(r, {pad, h * 0.06f, w - 2 * pad, h * 0.75f},
-                 values, peaks, theme);
+                 values, peaks, state.bandCount, theme);
     drawWave(r, {pad, h * 0.84f, w - 2 * pad, h * 0.07f},
              left ? state.waveLeft : state.waveRight,
              left ? SDL_Color{ 63, 226, 232, 255 } : SDL_Color{ 228, 112, 249, 255 });
@@ -228,9 +229,9 @@ void WallRenderer::drawCenter(SDL_Renderer* r, float w, float h,
     const float width = w - 2 * pad;
     const float half = width * 0.495f;
     drawSpectrum(r, {pad, h * 0.055f, half, h * 0.55f},
-                 state.left, state.leftPeaks, theme);
+                 state.left, state.leftPeaks, state.bandCount, theme);
     drawSpectrum(r, {pad + width * 0.505f, h * 0.055f, half, h * 0.55f},
-                 state.right, state.rightPeaks, theme);
+                 state.right, state.rightPeaks, state.bandCount, theme);
     line(r, w * 0.5f, h * 0.045f, w * 0.5f, h * 0.61f,
          { 40, 70, 88, 200 });
     drawWave(r, {pad, h * 0.65f, width, h * 0.115f}, state.waveLeft,
@@ -243,15 +244,16 @@ void WallRenderer::drawCenter(SDL_Renderer* r, float w, float h,
               state.vuRight, state.peakRight, theme);
 }
 
-void WallRenderer::drawWaterfall(SDL_Renderer* r, float w, float h, int) {
+void WallRenderer::drawWaterfall(SDL_Renderer* r, float w, float h,
+                                 std::size_t bands, int) {
     const float pad = std::max(18.0f, w * 0.016f);
     const float width = w - 2 * pad, height = h - 2 * pad;
     if (history_.empty()) return;
-    const float cellW = width / static_cast<float>(kBands);
+    const float cellW = width / static_cast<float>(bands);
     const float cellH = height / static_cast<float>(history_.size());
     std::size_t row = 0;
     for (const auto& frame : history_) {
-        for (std::size_t band = 0; band < kBands; ++band) {
+        for (std::size_t band = 0; band < bands; ++band) {
             const float strength = std::clamp(frame[band], 0.0f, 1.0f);
             const auto v = static_cast<unsigned char>(strength * 255.0f);
             rect(r, {pad + band * cellW, pad + row * cellH, cellW + 0.25f,
@@ -284,14 +286,18 @@ void WallRenderer::drawScreen(const ScreenWindow& screen,
     case ScreenRole::Left: drawPortrait(r, w, h, state, true, theme); break;
     case ScreenRole::Right: drawPortrait(r, w, h, state, false, theme); break;
     case ScreenRole::Center: drawCenter(r, w, h, state, theme); break;
-    case ScreenRole::Waterfall: drawWaterfall(r, w, h, theme); break;
+    case ScreenRole::Waterfall: drawWaterfall(r, w, h, state.bandCount, theme); break;
     }
     SDL_RenderPresent(r);
 }
 
 void WallRenderer::draw(const VisualState& state, int theme) {
-    std::array<float, kBands> combined{};
-    for (std::size_t i = 0; i < kBands; ++i)
+    if (historyBandCount_ != state.bandCount) {
+        history_.clear();
+        historyBandCount_ = state.bandCount;
+    }
+    std::array<float, kMaxBands> combined{};
+    for (std::size_t i = 0; i < state.bandCount; ++i)
         combined[i] = std::max(state.left[i], state.right[i]);
     history_.push_back(combined);
     if (history_.size() > 180) history_.pop_front();
