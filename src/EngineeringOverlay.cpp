@@ -198,25 +198,33 @@ void drawLevelMeterEngineering(SDL_Renderer* renderer,
     const SDL_FRect hoverArea = {
         plot.x, plot.y - 4.0f, plot.w, plot.h + 13.0f
     };
-    if (!mouseOverPlot(screen, hoverArea, w, h, mouseX, mouseY))
-        return;
-
-    const float fraction = std::clamp((mouseX - plot.x) / plot.w,
-                                      0.0f, 1.0f);
-    const float threshold = levelMeterDbAtFraction(
-        mirror ? 1.0f - fraction : fraction);
-    engineeringLine(renderer, mouseX, plot.y - 7.0f,
-                    mouseX, plot.y + plot.h + 8.0f,
-                    {255, 238, 160, 240});
+    const bool hovered = mouseOverPlot(
+        screen, hoverArea, w, h, mouseX, mouseY);
+    float threshold = kLevelMeterFloorDb;
+    if (hovered) {
+        const float fraction = std::clamp((mouseX - plot.x) / plot.w,
+                                          0.0f, 1.0f);
+        threshold = levelMeterDbAtFraction(
+            mirror ? 1.0f - fraction : fraction);
+        engineeringLine(renderer, mouseX, plot.y - 7.0f,
+                        mouseX, plot.y + plot.h + 8.0f,
+                        {255, 238, 160, 240});
+    }
     const float captionY = h * 0.975f;
     const float textX = plot.x + 6.0f;
     engineeringRect(renderer,
         {plot.x + 1.0f, captionY - 3.0f, plot.w - 2.0f, 19.0f},
         {5, 16, 28, 235});
     SDL_SetRenderDrawColor(renderer, 241, 245, 255, 255);
-    renderEngFormat(renderer, textX, captionY,
-        "%c THRESH %.1f  RMS %.1f  SAMPLE PEAK %.1f dBFS",
-        right ? 'R' : 'L', threshold, toDb(actualRms), toDb(samplePeak));
+    if (hovered) {
+        renderEngFormat(renderer, textX, captionY,
+            "%c CURSOR %.1f | RMS %.1f | PK %.1f dBFS",
+            right ? 'R' : 'L', threshold, toDb(actualRms), toDb(samplePeak));
+    } else {
+        renderEngFormat(renderer, textX, captionY,
+            "%c RMS %.1f dBFS | SAMPLE PK %.1f dBFS",
+            right ? 'R' : 'L', toDb(actualRms), toDb(samplePeak));
+    }
 }
 } // namespace
 
