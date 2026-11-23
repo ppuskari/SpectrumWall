@@ -13,29 +13,29 @@ struct ShortcutHelpRow {
 // One authoritative list for the renderer and compact-menu paging.
 inline constexpr std::array<ShortcutHelpRow, 11> kVisualShortcuts {{
     {"1-8",   "Choose color palette"},
-    {"C",     "Cycle palettes"},
+    {"C",     "Next palette"},
     {"V",     "LED / Lines / Hybrid"},
-    {"S",     "Fast / Balanced / Liquid"},
+    {"S",     "Smoothing profile"},
     {"F",     "Frequency softening"},
-    {"G",     "Glow: off / soft / vivid"},
+    {"G",     "Glow off / soft / vivid"},
     {"T",     "Afterglow trails"},
     {"R",     "Reflections"},
     {"P",     "Bass-reactive particles"},
-    {"[ / ]", "Decrease / increase bands"},
-    {"B",     "Cycle 64-256 band presets"}
+    {"[ / ]", "Band count -/+ 16"},
+    {"B",     "Cycle band presets"}
 }};
 inline constexpr std::array<ShortcutHelpRow, 11> kControlShortcuts {{
-    {"M",       "Mirror center left spectrum"},
-    {"H",       "Mirror right portrait"},
-    {"E",       "Engineering axes / probes"},
-    {"J",       "Stereo RMS balance meter"},
-    {"N",       "Next audio input"},
+    {"M",       "Center bass mirror"},
+    {"H",       "Right portrait mirror"},
+    {"E",       "Engineering axes/probe"},
+    {"J",       "Stereo RMS balance"},
+    {"N",       "Next audio source"},
     {"L",       "Capture / loopback"},
-    {"D",       "Toggle demo audio"},
-    {"F1 / RMB","Open / close help"},
-    {"TAB",     "Next help page (small view)"},
-    {"ESC",     "Close help; then exit"},
-    {"Q",       "Quit and save preferences"}
+    {"D",       "Demo audio on/off"},
+    {"F1 / RMB","Show / hide help"},
+    {"TAB",     "Help page (small view)"},
+    {"ESC",     "Close help / exit"},
+    {"Q",       "Quit and save"}
 }};
 
 struct ShortcutHelpLayout {
