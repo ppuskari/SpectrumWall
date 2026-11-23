@@ -11,6 +11,9 @@ inline constexpr std::size_t kDefaultBands = 128;
 inline constexpr std::size_t kBandStep = 16;
 inline constexpr std::size_t kWavePoints = 512;
 
+enum class SmoothingMode { Fast, Balanced, Liquid };
+const char* smoothingModeName(SmoothingMode mode);
+
 struct VisualState {
     std::size_t bandCount = kDefaultBands;
     std::array<float, kMaxBands> left{};
@@ -33,6 +36,10 @@ public:
     explicit SpectrumAnalyzer(std::size_t bands = kDefaultBands);
     void setBandCount(std::size_t bands);
     std::size_t bandCount() const { return state_.bandCount; }
+    void setSmoothingMode(SmoothingMode mode) { smoothingMode_ = mode; }
+    SmoothingMode smoothingMode() const { return smoothingMode_; }
+    void setSpectralSoftening(bool enabled) { spectralSoftening_ = enabled; }
+    bool spectralSoftening() const { return spectralSoftening_; }
     void update(const std::array<float, kFFTFrames * 2>& input, float dt);
     const VisualState& state() const { return state_; }
 
@@ -46,6 +53,8 @@ private:
     std::size_t bassBandCount_ = 1;
     VisualState state_{};
     float bassBaseline_ = 0.0f;
+    SmoothingMode smoothingMode_ = SmoothingMode::Balanced;
+    bool spectralSoftening_ = true;
 };
 
 float toDb(float linear);
