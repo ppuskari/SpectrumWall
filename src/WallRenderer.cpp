@@ -232,11 +232,13 @@ void WallRenderer::drawPortrait(SDL_Renderer* r, float w, float h,
     const float pad = std::max(12.0f, w * 0.027f);
     const auto& values = left ? state.left : state.right;
     const auto& peaks = left ? state.leftPeaks : state.rightPeaks;
+    // Mirror only the right portrait's frequency axis; data remains unchanged.
+    const bool mirror = portraitBandMirrored(left, rightPortraitMirror_);
     drawSpectrum(r, {pad, h * 0.06f, w - 2 * pad, h * 0.75f},
                  values, peaks, left ? afterglowLeft_ : afterglowRight_,
-                 state.bandCount, theme, !left);
+                 state.bandCount, theme, !left, mirror);
     drawReflections(r, {pad, h * 0.06f, w - 2 * pad, h * 0.75f},
-                    values, state.bandCount, theme, !left);
+                    values, state.bandCount, theme, !left, mirror);
     drawWave(r, {pad, h * 0.84f, w - 2 * pad, h * 0.07f},
              left ? state.waveLeft : state.waveRight,
              left ? SDL_Color{ 63, 226, 232, 255 } : SDL_Color{ 228, 112, 249, 255 });
@@ -334,6 +336,9 @@ void WallRenderer::drawScreen(ScreenWindow& screen, const VisualState& state,
                               state.bandCount, paletteName(theme),
                               smoothingModeName(smoothing), glowMode_,
                               trailsEnabled_ ? "ON" : "OFF");
+    if (screen.role == ScreenRole::Right)
+        SDL_RenderDebugTextFormat(r, 8.0f, 18.0f, "RIGHT PORTRAIT MIRROR: %s",
+                                  rightPortraitMirror_ ? "ON" : "OFF");
     SDL_SetRenderScale(r, 1.0f, 1.0f);
     SDL_RenderPresent(r);
 }
