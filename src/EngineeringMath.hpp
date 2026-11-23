@@ -9,6 +9,32 @@ inline constexpr float kMaxSpectrumHz = 18000.0f;
 inline constexpr float kSpectrumFloorDb = -72.0f;
 inline constexpr float kSpectrumCeilingDb = -2.0f;
 inline constexpr float kBalanceMeterRangeDb = 18.0f;
+inline constexpr float kLevelMeterFloorDb = -72.0f;
+inline constexpr float kLevelMeterCeilingDb = 0.0f;
+
+inline float levelMeterDbFraction(float db) {
+    return std::clamp((db - kLevelMeterFloorDb) /
+                      (kLevelMeterCeilingDb - kLevelMeterFloorDb), 0.0f, 1.0f);
+}
+inline float levelMeterDbAtFraction(float fraction) {
+    return kLevelMeterFloorDb +
+        std::clamp(fraction, 0.0f, 1.0f) *
+        (kLevelMeterCeilingDb - kLevelMeterFloorDb);
+}
+inline float levelMeterSamplePeakFraction(float amplitude) {
+    // Both VU and peak use the same logarithmic scale, unlike the old code
+    // which mistakenly placed raw linear amplitude directly on a dB graph.
+    return levelMeterDbFraction(
+        20.0f * std::log10(std::max(amplitude, 1.0e-8f)));
+}
+inline float levelMeterSmoothedRmsFraction(float vuNormalized) {
+    // VU follows the spectrum's -72..-2 normalized dB mapping. Translate to
+    // the lower meter's -72..0 dBFS instead of treating it as linear amplitude.
+    return levelMeterDbFraction(
+        kSpectrumFloorDb + std::clamp(vuNormalized, 0.0f, 1.0f) *
+        (kSpectrumCeilingDb - kSpectrumFloorDb));
+}
+
 
 inline float spectrumFrequencyFraction(float frequencyHz) {
     return std::clamp(
