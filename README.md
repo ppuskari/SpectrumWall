@@ -103,9 +103,30 @@ The default is **128 bands**. You can choose any integer from 64 to 256 when lau
 
 Press **[** and **]** to change the count in increments of 16, or **B** to cycle through 64, 96, 128, 192 and 256. All active screens update together without restarting Realtek capture. Each fullscreen view shows a small `N BANDS` indicator.
 
+### Shortcut help overlay
+
+**Right-click anywhere on a SpectrumWall monitor** to open a keyboard
+shortcut reference on that specific display. **F1** does the same on the
+focused window. The overlay floats above LED, Fluid Lines, Hybrid and
+Engineering Mode without interrupting the live stereo capture.
+
+At normal center or portrait resolutions, every shortcut appears in two
+readable columns. Small windowed previews show the same reference in two
+pages: press **Tab** or roll the mouse wheel to switch pages.
+
+To dismiss it, **left-click**, right-click again on that display, press
+**F1**, or press **Esc**. While help is open, **Esc only closes the help**;
+press it a second time to exit SpectrumWall. **Q always exits**, saving
+`SpectrumWall.ini` as usual. The open/closed help state is intentionally
+not saved as part of your display preferences.
+
 ### Hotkeys
 
-- **Esc** or **Q** — exit
+- **Esc** — close shortcut help if open; otherwise exit
+- **Q** — exit and save settings
+- **Right-click / F1** — toggle the shortcut reference on a display
+- **Left-click** — dismiss shortcut help when open
+- **Tab / mouse wheel** — switch shortcut pages on compact windows
 - **N** — next capture or loopback device in the current category
 - **L** — toggle between capture sources and playback loopbacks
 - **D** — toggle the synthetic audio test pattern
