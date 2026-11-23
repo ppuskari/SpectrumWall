@@ -360,6 +360,9 @@ void WallRenderer::drawScreen(ScreenWindow& screen, const VisualState& state,
     if (screen.role == ScreenRole::Center && stereoBalanceEnabled_)
         SDL_RenderDebugText(r, 8.0f, 40.0f, "STEREO RMS BALANCE: ON");
     SDL_SetRenderScale(r, 1.0f, 1.0f);
+    // Context-help is intentionally the final UI layer, above engineering
+    // rulers, stereo RMS gauges, and the persistent shortcut status line.
+    drawShortcutHelp(screen, w, h);
     SDL_RenderPresent(r);
 }
 
