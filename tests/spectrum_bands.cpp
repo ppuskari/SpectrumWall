@@ -1,4 +1,5 @@
 #include "SpectrumAnalyzer.hpp"
+#include "SettingsStore.hpp"
 #include "EngineeringMath.hpp"
 #include "CurveSampling.hpp"
 #include "SpectrumLayout.hpp"
@@ -7,6 +8,8 @@
 
 #include <cmath>
 #include <cstdio>
+#include <filesystem>
+#include <fstream>
 #include <numbers>
 
 using namespace spectrum;
@@ -161,6 +164,90 @@ int main() {
     CHECK(hsvToRgb(0.0f, 1.0f, 1.0f).r == 255);
     CHECK(hsvToRgb(120.0f, 1.0f, 1.0f).g == 255);
     CHECK(hsvToRgb(240.0f, 1.0f, 1.0f).b == 255);
+
+    // The settings are written only at shutdown. Verify first-create,
+    // update-in-place (Windows atomic replacement), and restart restoration.
+    const auto configPath = std::filesystem::current_path() /
+                             "SpectrumWall_Regression_Only.ini";
+    std::error_code fileEc;
+    std::filesystem::remove(configPath, fileEc);
+    bool loaded = true;
+    auto defaults = readSessionSettings(configPath, &loaded);
+    CHECK(!loaded);
+    CHECK(defaults.bands == 128);
+    CHECK(defaults.visual == 1);
+    CHECK(defaults.centerMirror);
+
+    SessionSettings settings;
+    settings.bands = 192;
+    settings.palette = 7;
+    settings.visual = 2;
+    settings.smoothing = 2;
+    settings.engineering = true;
+    settings.stereoBalance = true;
+    settings.spectralSoftening = false;
+    settings.glow = 1;
+    settings.trails = false;
+    settings.reflections = false;
+    settings.particles = false;
+    settings.centerMirror = false;
+    settings.rightPortraitMirror = false;
+    settings.fourth = true;
+    settings.windowed = true;
+    settings.demo = true;
+    settings.loopback = true;
+    settings.source = "Speakers (M-Caster Studio)";
+    CHECK(writeSessionSettings(configPath, settings));
+    auto restored = readSessionSettings(configPath, &loaded);
+    CHECK(loaded);
+    CHECK(restored.bands == 192 && restored.palette == 7);
+    CHECK(restored.visual == 2 && restored.smoothing == 2);
+    CHECK(restored.engineering && restored.stereoBalance);
+    CHECK(!restored.spectralSoftening && restored.glow == 1);
+    CHECK(!restored.trails && !restored.reflections && !restored.particles);
+    CHECK(!restored.centerMirror && !restored.rightPortraitMirror);
+    CHECK(restored.fourth && restored.windowed && restored.demo && restored.loopback);
+    CHECK(restored.source == "Speakers (M-Caster Studio)");
+
+    // Replacing an existing INI is different from writing a new file on
+    // Windows: this is where naive rename() would fail.
+    settings.bands = 64;
+    settings.palette = 1;
+    settings.visual = 0;
+    settings.engineering = false;
+    settings.stereoBalance = false;
+    settings.centerMirror = true;
+    settings.source = "Realtek Digital Input (Realtek High Definition Audio)";
+    CHECK(writeSessionSettings(configPath, settings));
+    restored = readSessionSettings(configPath, &loaded);
+    CHECK(loaded);
+    CHECK(restored.bands == 64 && restored.palette == 1);
+    CHECK(restored.visual == 0);
+    CHECK(!restored.engineering && !restored.stereoBalance);
+    CHECK(restored.centerMirror);
+    CHECK(restored.source == settings.source);
+    CHECK(!std::filesystem::exists(
+        std::filesystem::path(configPath.string() + ".tmp")));
+
+    // Edits to a hand-maintained configuration must be range-checked.
+    {
+        std::ofstream output(configPath, std::ios::trunc);
+        output << "version=1\\nbands=900\\npalette=99\\n"
+               << "visual=9\\nengineering=true\\nsource=Realtek\\n";
+    }
+    restored = readSessionSettings(configPath, &loaded);
+    CHECK(loaded);
+    CHECK(restored.bands == 128 && restored.palette == 4);
+    CHECK(restored.visual == 1 && restored.engineering);
+    CHECK(restored.source == "Realtek");
+    {
+        std::ofstream output(configPath, std::ios::trunc);
+        output << "version=2\\nbands=192\\n";
+    }
+    restored = readSessionSettings(configPath, &loaded);
+    CHECK(!loaded);
+    CHECK(restored.bands == 128);
+    std::filesystem::remove(configPath, fileEc);
 
     analyzer.setBandCount(1);
     CHECK(analyzer.bandCount() == kMinBands);
