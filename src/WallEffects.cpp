@@ -105,25 +105,32 @@ void WallRenderer::drawBloom(ScreenWindow& screen, float width, float height,
     const float padP = std::max(12.0f, width * 0.027f);
     const float padC = std::max(20.0f, width * 0.026f);
     const float centerWidth = width - 2 * padC;
+    // Match the GPU bloom source to the active visual style; line mode must
+    // not leave rectangular LED glows behind the new smooth curves.
+    const auto glow = [&](SDL_FRect area,
+                          const std::array<float, kMaxBands>& bands,
+                          bool right, bool mirror = false) {
+        if (spectrumStyle_ == SpectrumStyle::Led)
+            drawGlowBars(renderer, area, bands, state.bandCount,
+                         palette, right, mirror);
+        else
+            drawCurveGlow(renderer, area, bands, state.bandCount,
+                          palette, right, mirror);
+    };
     switch (screen.role) {
     case ScreenRole::Left:
-        drawGlowBars(renderer, {padP, height * 0.06f, width - 2 * padP,
-                                height * 0.75f}, state.left, state.bandCount,
-                     palette, false);
+        glow({padP, height * 0.06f, width - 2 * padP, height * 0.75f},
+             state.left, false);
         break;
     case ScreenRole::Right:
-        drawGlowBars(renderer, {padP, height * 0.06f, width - 2 * padP,
-                                height * 0.75f}, state.right, state.bandCount,
-                     palette, true, rightPortraitMirror_);
+        glow({padP, height * 0.06f, width - 2 * padP, height * 0.75f},
+             state.right, true, rightPortraitMirror_);
         break;
     case ScreenRole::Center:
-        drawGlowBars(renderer, {padC, height * 0.055f, centerWidth * 0.495f,
-                                height * 0.55f}, state.left, state.bandCount,
-                     palette, false, centerMirror_);
-        drawGlowBars(renderer, {padC + centerWidth * 0.505f,
-                                height * 0.055f, centerWidth * 0.495f,
-                                height * 0.55f}, state.right, state.bandCount,
-                     palette, true);
+        glow({padC, height * 0.055f, centerWidth * 0.495f, height * 0.55f},
+             state.left, false, centerMirror_);
+        glow({padC + centerWidth * 0.505f, height * 0.055f,
+              centerWidth * 0.495f, height * 0.55f}, state.right, true);
         break;
     case ScreenRole::Waterfall: break;
     }
