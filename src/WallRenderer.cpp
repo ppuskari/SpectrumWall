@@ -208,8 +208,11 @@ void WallRenderer::drawWave(SDL_Renderer* r, SDL_FRect plot,
 
 void WallRenderer::drawLevel(SDL_Renderer* r, SDL_FRect plot, float rms,
                              float peak, int theme, bool mirror) {
-    const float level = std::clamp(rms, 0.0f, 1.0f);
-    const float peakPos = std::clamp(peak, 0.0f, 1.0f);
+    // VU arrives as normalized smoothed RMS (-72..-2 dBFS), while peak is
+    // instantaneous linear sample amplitude. Convert BOTH to the same true
+    // -72..0 dBFS bottom meter scale before drawing.
+    const float level = levelMeterSmoothedRmsFraction(rms);
+    const float peakPos = levelMeterSamplePeakFraction(peak);
     constexpr int segments = 80;
     const float step = plot.w / segments;
     for (int i = 0; i < segments; ++i) {
@@ -225,7 +228,7 @@ void WallRenderer::drawLevel(SDL_Renderer* r, SDL_FRect plot, float rms,
          peak > 0.99f ? SDL_Color{255, 40, 44, 255}
                       : SDL_Color{235, 241, 255, 255});
     // A faint reference line marks the project's -2 dBFS headroom target.
-    const float target = std::pow(10.0f, -2.0f / 20.0f);
+    const float target = levelMeterDbFraction(-2.0f);
     const float targetX = plot.x + (mirror ? 1.0f - target : target) * plot.w;
     line(r, targetX, plot.y - 3.0f,
          targetX, plot.y + plot.h + 3.0f,
