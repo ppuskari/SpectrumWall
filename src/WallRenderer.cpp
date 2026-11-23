@@ -1,5 +1,6 @@
 #include "WallRenderer.hpp"
 #include "VisualStyle.hpp"
+#include "SpectrumLayout.hpp"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -137,7 +138,7 @@ void WallRenderer::drawSpectrum(SDL_Renderer* r, SDL_FRect plot,
                                 const std::array<float, kMaxBands>& values,
                                 const std::array<float, kMaxBands>& peaks,
                                 const std::array<float, kMaxBands>& trails,
-                                std::size_t bands, int theme, bool right) {
+                                std::size_t bands, int theme, bool right, bool mirror) {
     constexpr int segments = 36;
     const float step = plot.w / static_cast<float>(bands);
     const float segmentH = plot.h / static_cast<float>(segments);
@@ -145,7 +146,7 @@ void WallRenderer::drawSpectrum(SDL_Renderer* r, SDL_FRect plot,
     const float ledHeight = std::max(1.0f, segmentH * 0.82f);
     const Uint64 clock = SDL_GetTicks();
     for (std::size_t b = 0; b < bands; ++b) {
-        const float x = plot.x + step * static_cast<float>(b);
+        const float x = plot.x + step * static_cast<float>(visualBandIndex(b, bands, mirror));
         const float freq = static_cast<float>(b) / static_cast<float>(bands - 1);
         for (int s = 0; s < segments; ++s) {
             const float level = static_cast<float>(s + 1) / segments;
@@ -249,11 +250,13 @@ void WallRenderer::drawCenter(SDL_Renderer* r, float w, float h,
     const float pad = std::max(20.0f, w * 0.026f);
     const float width = w - 2 * pad;
     const float half = width * 0.495f;
+    // Mirrored left half: treble at outer edge, bass at center.
+    // The right half remains in normal bass-to-treble order.
     drawSpectrum(r, {pad, h * 0.055f, half, h * 0.55f},
                  state.left, state.leftPeaks, afterglowLeft_,
-                 state.bandCount, theme, false);
+                 state.bandCount, theme, false, centerMirror_);
     drawReflections(r, {pad, h * 0.055f, half, h * 0.55f},
-                    state.left, state.bandCount, theme, false);
+                    state.left, state.bandCount, theme, false, centerMirror_);
     drawSpectrum(r, {pad + width * 0.505f, h * 0.055f, half, h * 0.55f},
                  state.right, state.rightPeaks, afterglowRight_,
                  state.bandCount, theme, true);
