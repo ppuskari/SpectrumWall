@@ -35,6 +35,17 @@ Depending on your CMake/vcpkg generator, the executable may be under `build\src\
 - `--fourth`: enable the optional second horizontal display if one exists.
 - `--windowed`: open movable bordered windows rather than borderless screen-filling displays.
 
+### Live spectrum density
+
+The default is **128 bands**. You can choose any integer from 64 to 256 when launching:
+
+```powershell
+.\\SpectrumWall.exe --bands 128
+.\\SpectrumWall.exe --bands 256 --windowed
+```
+
+Press **[** and **]** to change the count in increments of 16, or **B** to cycle through 64, 96, 128, 192 and 256. All active screens update together without restarting Realtek capture. Each fullscreen view shows a small `N BANDS` indicator.
+
 ### Hotkeys
 
 - **Esc** or **Q** — exit
@@ -42,12 +53,14 @@ Depending on your CMake/vcpkg generator, the executable may be under `build\src\
 - **L** — toggle between capture sources and playback loopbacks
 - **D** — toggle the synthetic audio test pattern
 - **1 / 2 / 3** — switch between Classic, Neon and Amber LED palettes
+- **[ / ]** — decrease / increase active spectrum bars by 16, clamped to 64–256
+- **B** — cycle through 64, 96, 128, 192 and 256-band presets
 
 The application prints available audio endpoints and the currently selected source to the console. An eventual in-app control panel and persistent monitor mapping are tracked for future releases.
 
 ## Architecture
 
-A single stereo capture path feeds a rolling PCM ring buffer. FFT, peaks and RMS are computed once, and the resulting visualization state is shared across separate SDL3 renderer windows. The current implementation targets 48 kHz float stereo conversion, a 4096-point Hann FFT, 96 log-spaced bands, peak hold and a 60 FPS render loop.
+A single stereo capture path feeds a rolling PCM ring buffer. FFT, peaks and RMS are computed once, and the resulting visualization state is shared across separate SDL3 renderer windows. The current implementation targets 48 kHz float stereo conversion, a 4096-point Hann FFT, 64–256 log-spaced bands (default 128), peak hold and a 60 FPS render loop. FFT band boundaries are cached on resolution changes. Frequency bin resolution remains approximately 11.72 Hz at 48 kHz, so additional bars do not add FFT frequency discrimination.
 
 ## Known constraints of the first proof of concept
 
