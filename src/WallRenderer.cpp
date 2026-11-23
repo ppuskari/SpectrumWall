@@ -1,4 +1,5 @@
 #include "WallRenderer.hpp"
+#include "VisualStyle.hpp"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -7,23 +8,12 @@
 
 namespace spectrum {
 namespace {
-SDL_Color colorFor(float height, bool illuminated, int theme) {
-    if (!illuminated) return { 13, 23, 31, 255 };
-    height = std::clamp(height, 0.0f, 1.0f);
-    if (theme == 1) { // neon: cyan -> violet -> hot pink
-        if (height < 0.55f) return { 32, 218, 245, 255 };
-        if (height < 0.82f) return { 151, 92, 255, 255 };
-        return { 255, 78, 171, 255 };
-    }
-    if (theme == 2) { // warm amber
-        if (height < 0.55f) return { 255, 148, 32, 255 };
-        if (height < 0.82f) return { 255, 195, 52, 255 };
-        return { 255, 67, 46, 255 };
-    }
-    // classic hi-fi: green -> amber -> red
-    if (height < 0.65f) return { 48, 237, 144, 255 };
-    if (height < 0.85f) return { 255, 207, 62, 255 };
-    return { 255, 64, 69, 255 };
+SDL_Color colorFor(float frequency, float height, float energy,
+                   bool illuminated, int theme, bool right = false,
+                   Uint8 alpha = 255) {
+    if (!illuminated) return { 11, 20, 29, 255 };
+    const Rgb rgb = paletteRgb(frequency, height, energy, theme, right);
+    return { rgb.r, rgb.g, rgb.b, alpha };
 }
 
 void setColor(SDL_Renderer* r, SDL_Color c) {
@@ -54,6 +44,7 @@ const char* roleName(ScreenRole r) {
 
 WallRenderer::~WallRenderer() {
     for (auto& s : screens_) {
+        if (s.glowTarget) SDL_DestroyTexture(s.glowTarget);
         if (s.renderer) SDL_DestroyRenderer(s.renderer);
         if (s.window) SDL_DestroyWindow(s.window);
     }
@@ -145,29 +136,54 @@ bool WallRenderer::initialize(bool enableFourth, bool windowed) {
 void WallRenderer::drawSpectrum(SDL_Renderer* r, SDL_FRect plot,
                                 const std::array<float, kMaxBands>& values,
                                 const std::array<float, kMaxBands>& peaks,
-                                std::size_t bands, int theme) {
-    constexpr int segments = 32;
+                                const std::array<float, kMaxBands>& trails,
+                                std::size_t bands, int theme, bool right) {
+    constexpr int segments = 36;
     const float step = plot.w / static_cast<float>(bands);
     const float segmentH = plot.h / static_cast<float>(segments);
     const float ledWidth = std::max(0.4f, step * 0.84f);
-    const float ledHeight = std::max(1.0f, segmentH - std::max(1.0f, segmentH * 0.14f));
+    const float ledHeight = std::max(1.0f, segmentH * 0.82f);
+    const Uint64 clock = SDL_GetTicks();
     for (std::size_t b = 0; b < bands; ++b) {
         const float x = plot.x + step * static_cast<float>(b);
+        const float freq = static_cast<float>(b) / static_cast<float>(bands - 1);
         for (int s = 0; s < segments; ++s) {
-            const float fraction = static_cast<float>(s + 1) / segments;
+            const float level = static_cast<float>(s + 1) / segments;
             const float y = plot.y + plot.h - (s + 1) * segmentH;
-            const bool on = values[b] >= fraction;
-            SDL_Color color = colorFor(fraction, on, theme);
-            if (on && segmentH > 4.0f) {
-                SDL_Color halo = color;
-                halo.a = 38;
-                rect(r, {x - 1.0f, y - 1.0f, ledWidth + 2.0f, ledHeight + 2.0f}, halo);
+            const bool on = values[b] >= level;
+            const bool ghost = trailsEnabled_ && !on && trails[b] >= level;
+            SDL_Color color;
+            if (on) {
+                color = colorFor(freq, level, values[b], true, theme, right);
+                if (glowMode_ && segmentH > 4.0f && step > 2.0f && level > 0.4f) {
+                    SDL_Color halo = color; halo.a = 38;
+                    rect(r, {x - 1.5f, y - 1.5f, ledWidth + 3.0f,
+                             ledHeight + 3.0f}, halo);
+                }
+            } else if (ghost) {
+                color = colorFor(freq, level, trails[b], true, theme, right,
+                                 static_cast<Uint8>(45 + 65 * level));
+            } else {
+                const Rgb dim = paletteRgb(freq, level, 0.12f, theme, right);
+                color = { static_cast<Uint8>(dim.r * 0.07f + 6),
+                          static_cast<Uint8>(dim.g * 0.07f + 8),
+                          static_cast<Uint8>(dim.b * 0.07f + 11), 255 };
             }
             rect(r, {x, y, ledWidth, ledHeight}, color);
         }
-        const float py = plot.y + (1.0f - peaks[b]) * plot.h;
-        rect(r, { x, py, ledWidth, std::max(1.0f, segmentH * 0.25f) },
-             { 234, 243, 255, 240 });
+        const float peak = std::clamp(peaks[b], 0.0f, 1.0f);
+        if (peak < 0.02f) continue;
+        const float py = plot.y + (1.0f - peak) * plot.h;
+        const Rgb tint = paletteRgb(freq, peak, peak, theme, right);
+        rect(r, {x, py, ledWidth, std::max(1.4f, segmentH * 0.28f)},
+             {static_cast<Uint8>(std::min(255, tint.r + 40)),
+              static_cast<Uint8>(std::min(255, tint.g + 40)),
+              static_cast<Uint8>(std::min(255, tint.b + 40)), 255});
+        if (glowMode_ && peak > 0.5f && ((b * 37u + clock / 100u) % 19u == 0u)) {
+            const float cx = x + ledWidth * 0.5f;
+            line(r, cx - 4, py, cx + 4, py, {240, 249, 255, 210});
+            line(r, cx, py - 4, cx, py + 4, {240, 249, 255, 210});
+        }
     }
 }
 
