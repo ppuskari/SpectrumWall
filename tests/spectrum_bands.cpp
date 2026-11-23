@@ -1,5 +1,6 @@
 #include "SpectrumAnalyzer.hpp"
 #include "SettingsStore.hpp"
+#include "ShortcutHelpLayout.hpp"
 #include "EngineeringMath.hpp"
 #include "CurveSampling.hpp"
 #include "SpectrumLayout.hpp"
@@ -27,6 +28,32 @@ int main() {
         const float t = static_cast<float>(i) / static_cast<float>(kSampleRate);
         stereo[i * 2] = 0.6f * std::sin(2.0f * pi * 110.0f * t);
         stereo[i * 2 + 1] = 0.4f * std::sin(2.0f * pi * 880.0f * t);
+    }
+
+    // Shortcut popup uses two columns at fullscreen resolutions and switches
+    // to paginated, scaled single-column help for smaller windowed previews.
+    const auto centerHelp = shortcutHelpLayout(3440.0f, 1440.0f, 0);
+    CHECK(centerHelp.columns == 2);
+    CHECK(centerHelp.pages == 1 && centerHelp.page == 0);
+    CHECK(!centerHelp.compact && centerHelp.scale == 1.0f);
+    const auto portraitHelp = shortcutHelpLayout(1080.0f, 1920.0f, 0);
+    CHECK(portraitHelp.columns == 2 && portraitHelp.scale == 1.0f);
+    const auto compactHelp = shortcutHelpLayout(610.0f, 740.0f, 1);
+    CHECK(compactHelp.columns == 1);
+    CHECK(compactHelp.pages == 2 && compactHelp.page == 1);
+    CHECK(compactHelp.scale == 1.0f);
+    const auto compactWrapped = shortcutHelpLayout(610.0f, 740.0f, 3);
+    CHECK(compactWrapped.page == 1);
+    const auto tinyHelp = shortcutHelpLayout(350.0f, 300.0f, 0);
+    CHECK(tinyHelp.compact && tinyHelp.scale > 0.0f && tinyHelp.scale < 1.0f);
+    CHECK(kVisualShortcuts.size() == kControlShortcuts.size());
+    for (const auto& item : kVisualShortcuts) {
+        CHECK(item.key != nullptr && item.key[0] != '\0');
+        CHECK(item.description != nullptr && item.description[0] != '\0');
+    }
+    for (const auto& item : kControlShortcuts) {
+        CHECK(item.key != nullptr && item.key[0] != '\0');
+        CHECK(item.description != nullptr && item.description[0] != '\0');
     }
 
     // Bass in the middle on the center stereo panel:
