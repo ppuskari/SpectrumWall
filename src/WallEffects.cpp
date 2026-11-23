@@ -1,5 +1,6 @@
 #include "WallRenderer.hpp"
 #include "VisualStyle.hpp"
+#include "SpectrumLayout.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -15,7 +16,7 @@ void fxRect(SDL_Renderer* renderer, SDL_FRect r, SDL_Color color) {
 
 void WallRenderer::drawGlowBars(SDL_Renderer* renderer, SDL_FRect plot,
                                 const std::array<float, kMaxBands>& values,
-                                std::size_t bands, int palette, bool right) {
+                                std::size_t bands, int palette, bool right, bool mirror) {
     const float step = plot.w / static_cast<float>(bands);
     for (std::size_t b = 0; b < bands; ++b) {
         const float value = std::clamp(values[b], 0.0f, 1.0f);
@@ -23,7 +24,7 @@ void WallRenderer::drawGlowBars(SDL_Renderer* renderer, SDL_FRect plot,
         const float freq = static_cast<float>(b) / static_cast<float>(bands - 1);
         const Rgb c = paletteRgb(freq, value, value, palette, right);
         fxRect(renderer,
-            {plot.x + step * b, plot.y + (1.0f - value) * plot.h,
+            {plot.x + step * visualBandIndex(b, bands, mirror), plot.y + (1.0f - value) * plot.h,
              step * 1.25f, value * plot.h},
             {c.r, c.g, c.b, static_cast<Uint8>(glowMode_ == 2 ? 180 : 115)});
     }
@@ -31,7 +32,7 @@ void WallRenderer::drawGlowBars(SDL_Renderer* renderer, SDL_FRect plot,
 
 void WallRenderer::drawReflections(SDL_Renderer* renderer, SDL_FRect plot,
                                    const std::array<float, kMaxBands>& values,
-                                   std::size_t bands, int palette, bool right) {
+                                   std::size_t bands, int palette, bool right, bool mirror) {
     if (!reflectionsEnabled_) return;
     const float step = plot.w / static_cast<float>(bands);
     const float depth = plot.h * 0.04f;
@@ -44,7 +45,7 @@ void WallRenderer::drawReflections(SDL_Renderer* renderer, SDL_FRect plot,
             const auto alpha = static_cast<Uint8>(std::clamp(
                 value * (4 - layer) * 15.0f, 0.0f, 100.0f));
             fxRect(renderer,
-                {plot.x + b * step,
+                {plot.x + visualBandIndex(b, bands, mirror) * step,
                  plot.y + plot.h + (layer * depth) / 4.0f,
                  step * 0.82f, depth / 4.0f + 1.0f},
                 {c.r, c.g, c.b, alpha});
@@ -118,7 +119,7 @@ void WallRenderer::drawBloom(ScreenWindow& screen, float width, float height,
     case ScreenRole::Center:
         drawGlowBars(renderer, {padC, height * 0.055f, centerWidth * 0.495f,
                                 height * 0.55f}, state.left, state.bandCount,
-                     palette, false);
+                     palette, false, centerMirror_);
         drawGlowBars(renderer, {padC + centerWidth * 0.505f,
                                 height * 0.055f, centerWidth * 0.495f,
                                 height * 0.55f}, state.right, state.bandCount,
