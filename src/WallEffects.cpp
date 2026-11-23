@@ -114,7 +114,7 @@ void WallRenderer::drawBloom(ScreenWindow& screen, float width, float height,
     case ScreenRole::Right:
         drawGlowBars(renderer, {padP, height * 0.06f, width - 2 * padP,
                                 height * 0.75f}, state.right, state.bandCount,
-                     palette, true);
+                     palette, true, rightPortraitMirror_);
         break;
     case ScreenRole::Center:
         drawGlowBars(renderer, {padC, height * 0.055f, centerWidth * 0.495f,
