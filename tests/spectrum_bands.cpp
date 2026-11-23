@@ -86,6 +86,27 @@ int main() {
     CHECK(std::abs(spectrumDbAtFraction(0.0f) + 72.0f) < 0.001f);
     CHECK(std::abs(spectrumDbAtFraction(1.0f) + 2.0f) < 0.001f);
     CHECK(std::abs(spectrumDbFraction(-37.0f) - 0.5f) < 0.001f);
+    // Bottom VU bars and sample peaks must share a logarithmic dBFS ruler.
+    CHECK(std::abs(levelMeterDbFraction(-72.0f)) < 1.0e-6f);
+    CHECK(std::abs(levelMeterDbFraction(0.0f) - 1.0f) < 1.0e-6f);
+    CHECK(std::abs(levelMeterDbAtFraction(0.5f) + 36.0f) < 1.0e-4f);
+    CHECK(std::abs(levelMeterSamplePeakFraction(1.0f) - 1.0f) < 1.0e-6f);
+    CHECK(std::abs(levelMeterSamplePeakFraction(0.5f) -
+                   levelMeterDbFraction(-6.0206f)) < 1.0e-5f);
+    CHECK(std::abs(levelMeterSamplePeakFraction(std::pow(10.0f, -2.0f/20.0f)) -
+                   levelMeterDbFraction(-2.0f)) < 1.0e-6f);
+    for (const float db : {-72.0f, -48.0f, -24.0f, -12.0f, -6.0f, -2.0f, 0.0f}) {
+        const float position = levelMeterDbFraction(db);
+        CHECK(std::abs(levelMeterDbAtFraction(position) - db) < 1.0e-5f);
+        // The smoothed VU maps back to the same scale used by peak markers.
+        if (db <= kSpectrumCeilingDb) {
+            CHECK(std::abs(levelMeterSmoothedRmsFraction(spectrumDbFraction(db)) -
+                           position) < 1.0e-5f);
+        }
+        // Mirroring changes placement but must not affect the decibel reading.
+        CHECK(std::abs(position + (1.0f - position) - 1.0f) < 1.0e-6f);
+    }
+
     CHECK(spectrumBandCenterHz(0, 128) >= 30.0f);
     CHECK(spectrumBandCenterHz(127, 128) <= 18000.0f);
 
