@@ -282,20 +282,22 @@ void WallRenderer::drawWaterfall(SDL_Renderer* r, float w, float h,
     for (const auto& frame : history_) {
         for (std::size_t band = 0; band < bands; ++band) {
             const float strength = std::clamp(frame[band], 0.0f, 1.0f);
-            const auto v = static_cast<unsigned char>(strength * 255.0f);
+            const float freq = static_cast<float>(band) /
+                               static_cast<float>(bands - 1);
+            const Rgb tint = paletteRgb(freq, strength, strength, 3);
+            const float light = 0.13f + strength * 0.87f;
             rect(r, {pad + band * cellW, pad + row * cellH, cellW + 0.25f,
                      cellH + 0.25f},
-                 { static_cast<Uint8>(std::min(255, static_cast<int>(v) * 2)),
-                   static_cast<Uint8>(strength > 0.5f ? (strength - 0.5f) * 510 : 0),
-                   static_cast<Uint8>(std::min(255, 32 + static_cast<int>(v))),
-                   255 });
+                 { static_cast<Uint8>(tint.r * light),
+                   static_cast<Uint8>(tint.g * light),
+                   static_cast<Uint8>(tint.b * light), 255 });
         }
         ++row;
     }
 }
 
-void WallRenderer::drawScreen(const ScreenWindow& screen,
-                              const VisualState& state, int theme) {
+void WallRenderer::drawScreen(ScreenWindow& screen, const VisualState& state,
+                              int theme, SmoothingMode smoothing) {
     SDL_Renderer* r = screen.renderer;
     int width = 0, height = 0;
     if (!SDL_GetRenderOutputSize(r, &width, &height)) return;
@@ -307,8 +309,14 @@ void WallRenderer::drawScreen(const ScreenWindow& screen,
     SDL_RenderClear(r);
     for (int i = 1; i <= 12; ++i) {
         const float y = i * h / 13.0f;
-        line(r, 0, y, w, y, { 27, 42, 55, 60 });
+        line(r, 0, y, w, y, { 27, 42, 55, 55 });
     }
+    for (int i = 1; i <= 18; ++i) {
+        const float x = i * w / 19.0f;
+        line(r, x, 0, x, h, { 20, 36, 49, 28 });
+    }
+    drawParticles(r, w, h, state.bassPulse, theme);
+    drawBloom(screen, w, h, state, theme);
     switch (screen.role) {
     case ScreenRole::Left: drawPortrait(r, w, h, state, true, theme); break;
     case ScreenRole::Right: drawPortrait(r, w, h, state, false, theme); break;
@@ -318,21 +326,35 @@ void WallRenderer::drawScreen(const ScreenWindow& screen,
     // Minimal hardware-accelerated OSD confirms live band changes in fullscreen.
     SDL_SetRenderDrawColor(r, 192, 224, 232, 235);
     SDL_SetRenderScale(r, 2.0f, 2.0f);
-    SDL_RenderDebugTextFormat(r, 8.0f, 8.0f, "%zu BANDS", state.bandCount);
+    SDL_RenderDebugTextFormat(r, 8.0f, 8.0f,
+                              "%zu BANDS | %s | %s | GLOW %d | TRAILS %s",
+                              state.bandCount, paletteName(theme),
+                              smoothingModeName(smoothing), glowMode_,
+                              trailsEnabled_ ? "ON" : "OFF");
     SDL_SetRenderScale(r, 1.0f, 1.0f);
     SDL_RenderPresent(r);
 }
 
-void WallRenderer::draw(const VisualState& state, int theme) {
+void WallRenderer::draw(const VisualState& state, int theme, float dt,
+                        SmoothingMode smoothing) {
     if (historyBandCount_ != state.bandCount) {
         history_.clear();
+        afterglowLeft_.fill(0.0f);
+        afterglowRight_.fill(0.0f);
         historyBandCount_ = state.bandCount;
+    }
+    const float decay = std::exp(-std::clamp(dt, 0.0f, 0.2f) / 0.62f);
+    for (std::size_t i = 0; i < state.bandCount; ++i) {
+        afterglowLeft_[i] = trailsEnabled_
+            ? std::max(state.left[i], afterglowLeft_[i] * decay) : state.left[i];
+        afterglowRight_[i] = trailsEnabled_
+            ? std::max(state.right[i], afterglowRight_[i] * decay) : state.right[i];
     }
     std::array<float, kMaxBands> combined{};
     for (std::size_t i = 0; i < state.bandCount; ++i)
         combined[i] = std::max(state.left[i], state.right[i]);
     history_.push_back(combined);
     if (history_.size() > 180) history_.pop_front();
-    for (const auto& s : screens_) drawScreen(s, state, theme);
+    for (auto& s : screens_) drawScreen(s, state, theme, smoothing);
 }
 } // namespace spectrum
