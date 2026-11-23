@@ -40,6 +40,58 @@ Depending on your CMake/vcpkg generator, the executable may be under `build\src\
 - `--palette N`: choose color scheme **1–8** (default 4, Prism Rainbow).
 - `--smoothing fast|balanced|liquid`: choose attack/release response (default balanced).
 
+### Persistent settings (SpectrumWall.ini)
+
+SpectrumWall now restores the previous live display arrangement automatically.
+**On normal exit** (Esc, Q, or closing a window), it writes exactly one small
+configuration update to `SpectrumWall.ini` **beside the executable**. On next
+launch it reads that file before processing command-line arguments, so flags
+you supply explicitly always override saved values.
+
+The file is a plain UTF-8-ish `key=value` text file and can be edited while
+SpectrumWall is closed. It includes band count, selected palette, LED/Lines/
+Hybrid style, smoothing profile, frequency softening, GPU glow intensity,
+afterglow, reflections, particles, center/right portrait mirroring,
+Engineering Mode, stereo RMS bias meter, fullscreen/windowed and optional
+fourth display selection, demo/loopback status, and the preferred WASAPI
+capture endpoint name. The exact audio endpoint is selected by name rather
+than transient numeric device index; if it disappears, automatic detection
+falls back to the Realtek optical input when available.
+
+For example, after closing a session in Hybrid / 128 bands with axes and
+balance shown, the file contains values such as:
+
+```ini
+version=1
+bands=128
+palette=4
+visual=2
+smoothing=1
+engineering=1
+stereo_balance=1
+glow=2
+center_mirror=1
+right_portrait_mirror=1
+source=Realtek Digital Input (Realtek High Definition Audio)
+```
+
+Useful startup overrides:
+
+```powershell
+.\\SpectrumWall.exe
+.\\SpectrumWall.exe --visual hybrid --bands 192
+.\\SpectrumWall.exe --fullscreen --no-engineering
+.\\SpectrumWall.exe --defaults
+.\\SpectrumWall.exe --no-save --windowed
+```
+
+`--defaults` ignores the existing INI for that session and saves the new
+settings when you exit. `--no-save` tests a temporary arrangement without
+changing the stored preferences. The save writes a temporary file and then
+replaces the INI; interrupted writes should leave the prior INI intact. If the
+folder isn't writable (e.g. Program Files), SpectrumWall warns in the
+console and you should move the portable executable to a writable directory.
+
 ### Live spectrum density
 
 The default is **128 bands**. You can choose any integer from 64 to 256 when launching:
@@ -73,7 +125,7 @@ Press **[** and **]** to change the count in increments of 16, or **B** to cycle
 - **[ / ]** — decrease / increase active spectrum bars by 16, clamped to 64–256
 - **B** — cycle through 64, 96, 128, 192 and 256-band presets
 
-The application prints available audio endpoints and the currently selected source to the console. An eventual in-app control panel and persistent monitor mapping are tracked for future releases.
+The application prints available audio endpoints and the currently selected source to the console. An eventual in-app control panel and explicit per-monitor assignment remain future enhancements; display preferences are now persisted automatically.
 
 ## Center-monitor stereo symmetry
 
@@ -90,6 +142,8 @@ This is **rendering-only**:
 FFT bins, stereo levels, waveforms, peak tracking, colors and optical recording remain
 unchanged. The left half's glow, reflections and animated peak indicators are mirrored
 with the bars, keeping all effects spatially aligned.
+The lower-left center **VU level meter, peak marker and -2 dB target line**
+now mirror with the upper-left spectrum. The center-right VU meter stays normal.
 
 Press **M** to switch between mirrored and original center layouts live.
 Press **H** to independently toggle the right portrait's mirroring. Its bars, peak hold,
@@ -112,6 +166,9 @@ normally with either layer enabled.
   normalized visual envelope. Its values refer to the visual range, **not** a
   calibration of the physical audio input. Tick labels identify the plotted
   **30 Hz–18 kHz** logarithmic spectrum.
+- The engineering frequency tick labels, dBFS numbers, probe text and balance
+  gauge readout are rendered **30% larger** than the original tiny SDL3 font.
+  Tick spacing increases to keep mirrored portrait legends readable.
 - Hover your mouse over a channel spectrum to see the nearest **actual FFT
   bucket number, frequency range in Hz and raw per-band peak dBFS reading**.
   The probe uses the pre-smoothed Hann-windowed FFT magnitude, *not* the
