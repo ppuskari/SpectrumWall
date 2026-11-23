@@ -52,6 +52,24 @@ int main() {
         CHECK(leftActive && rightActive);
     }
 
+    // Verify temporal smoothing modes and their runtime selection.
+    SpectrumAnalyzer quick(128), fluid(128);
+    quick.setSmoothingMode(SmoothingMode::Fast);
+    fluid.setSmoothingMode(SmoothingMode::Liquid);
+    quick.setSpectralSoftening(false);
+    fluid.setSpectralSoftening(false);
+    CHECK(!quick.spectralSoftening());
+    quick.update(stereo, 1.0f / 60.0f);
+    fluid.update(stereo, 1.0f / 60.0f);
+    bool foundFasterAttack = false;
+    for (std::size_t b = 0; b < 128; ++b)
+        if (quick.state().left[b] > fluid.state().left[b] + 0.01f)
+            foundFasterAttack = true;
+    CHECK(foundFasterAttack);
+    CHECK(quick.smoothingMode() == SmoothingMode::Fast);
+    CHECK(fluid.smoothingMode() == SmoothingMode::Liquid);
+    CHECK(smoothingModeName(SmoothingMode::Liquid)[0] == 'L');
+
     analyzer.setBandCount(1);
     CHECK(analyzer.bandCount() == kMinBands);
     analyzer.setBandCount(500);
