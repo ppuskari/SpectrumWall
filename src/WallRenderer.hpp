@@ -1,5 +1,6 @@
 #pragma once
 #include "SpectrumAnalyzer.hpp"
+#include "Retro3D.hpp"
 #include <SDL3/SDL.h>
 #include <algorithm>
 #include <array>
@@ -75,12 +76,25 @@ public:
     void dismissShortcutHelp() { helpWindowId_ = 0; helpPage_ = 0; }
     bool shortcutHelpOpen() const { return helpWindowId_ != 0; }
     void advanceShortcutHelpPage(int direction);
+    void cycleRetro3DMode() {
+        retro3dMode_=static_cast<Retro3DMode>(
+            (static_cast<int>(retro3dMode_)+1)%4);
+    }
+    void setRetro3DMode(Retro3DMode mode) { retro3dMode_=mode; }
+    Retro3DMode retro3dMode() const { return retro3dMode_; }
+    void toggleRetro3DBeat() { retro3dBeatReactive_=!retro3dBeatReactive_; }
+    bool retro3dBeatReactive() const { return retro3dBeatReactive_; }
+    void setRetro3DBeat(bool enabled) { retro3dBeatReactive_=enabled; }
+    void cycleRetro3DSize() { retro3dSize_=(retro3dSize_+1)%3; }
+    void setRetro3DSize(int size) {retro3dSize_=std::clamp(size,0,2);}
+    int retro3dSize() const {return retro3dSize_;}
 
 
 private:
     void drawScreen(ScreenWindow& screen, const VisualState& state, int palette,
                     SmoothingMode smoothing);
     void drawShortcutHelp(const ScreenWindow& screen, float width, float height);
+    void drawRetro3D(SDL_Renderer* r,float width,float height);
     void drawEngineeringOverlay(const ScreenWindow& screen,
                                 const VisualState& state, float w, float h);
     void drawStereoBalance(SDL_Renderer* renderer, float w, float h,
@@ -144,5 +158,13 @@ private:
     int helpPage_ = 0;
     float helpAnchorX_ = 0.5f;
     float helpAnchorY_ = 0.35f;
+    Retro3DMode retro3dMode_ = Retro3DMode::Off; // opt in
+    bool retro3dBeatReactive_ = true;
+    int retro3dSize_ = 1;
+    float retro3dTime_ = 0.0f;
+    float retro3dDancePhase_ = 0.0f;
+    float retro3dEnergy_ = 0.0f;
+    float retro3dLastPulse_ = 0.0f;
+    float retro3dBeatCooldown_ = 0.0f;
 };
 } // namespace spectrum
