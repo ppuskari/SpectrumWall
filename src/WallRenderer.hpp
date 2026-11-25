@@ -1,6 +1,8 @@
 #pragma once
 #include "SpectrumAnalyzer.hpp"
 #include "Retro3D.hpp"
+#include "RetroAssets.hpp"
+#include <filesystem>
 #include <SDL3/SDL.h>
 #include <algorithm>
 #include <array>
@@ -88,6 +90,7 @@ public:
     void cycleRetro3DSize() { retro3dSize_=(retro3dSize_+1)%3; }
     void setRetro3DSize(int size) {retro3dSize_=std::clamp(size,0,2);}
     int retro3dSize() const {return retro3dSize_;}
+    void setRetroAssetsRoot(const std::filesystem::path& root);
 
 
 private:
@@ -166,5 +169,9 @@ private:
     float retro3dEnergy_ = 0.0f;
     float retro3dLastPulse_ = 0.0f;
     float retro3dBeatCooldown_ = 0.0f;
+    RetroAssetClip retroDancerClip_{};
+    RetroAssetClip retroCanClip_{};
+    std::vector<SDL_Texture*> retroDancerTextures_;
+    std::vector<SDL_Texture*> retroCanTextures_;
 };
 } // namespace spectrum
