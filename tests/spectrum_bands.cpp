@@ -1,6 +1,7 @@
 #include "SpectrumAnalyzer.hpp"
 #include "SettingsStore.hpp"
 #include "ShortcutHelpLayout.hpp"
+#include "RetroAssets.hpp"
 #include "EngineeringMath.hpp"
 #include "CurveSampling.hpp"
 #include "SpectrumLayout.hpp"
@@ -29,6 +30,46 @@ int main() {
         stereo[i * 2] = 0.6f * std::sin(2.0f * pi * 110.0f * t);
         stereo[i * 2 + 1] = 0.4f * std::sin(2.0f * pi * 880.0f * t);
     }
+
+    // Local-only OBJ asset loading: geometry, material colors, animated
+    // frame selection, and texture paths are deliberately not committed.
+    const auto retroTestRoot = std::filesystem::current_path() /
+                               "SpectrumWall_PrivateModel_Test";
+    std::error_code cleanupEc;
+    std::filesystem::remove_all(retroTestRoot, cleanupEc);
+    std::filesystem::create_directories(retroTestRoot / "can");
+    std::filesystem::create_directories(retroTestRoot / "dancer" / "frames");
+    {
+        std::ofstream mtl(retroTestRoot / "can" / "sample.mtl");
+        mtl << "newmtl cola\\nKd 1.0 0.2 0.15\\nmap_Kd label.png\\n";
+        std::ofstream obj(retroTestRoot / "can" / "can.obj");
+        obj << "mtllib sample.mtl\\n"
+            << "v -1 0 0\\nv 1 0 0\\nv 0 2 0\\n"
+            << "vt 0 0\\nvt 1 0\\nvt 0.5 1\\n"
+            << "usemtl cola\\nf 1/1 2/2 3/3\\n";
+    }
+    const auto testCan=loadRetroAssetClip(retroTestRoot/"can",false);
+    CHECK(testCan.frames.size()==1);
+    CHECK(testCan.frames[0].size()==1);
+    CHECK(testCan.textures.size()==1);
+    CHECK(testCan.textures[0].filename()=="label.png");
+    CHECK(testCan.frames[0][0].textureId==0);
+    CHECK(testCan.frames[0][0].color.r==255);
+    CHECK(std::abs(testCan.frames[0][0].uvC.v-0.0f)<1e-6f);
+    for(int frame=0;frame<2;++frame){
+        std::ofstream obj(retroTestRoot/"dancer"/"frames"/
+                          ("frame_000"+std::to_string(frame)+".obj"));
+        obj << "v 0 0 0\\nv 1 0 0\\nv 0 "
+            << (frame==0?1:2) << " 0\\nf 1 2 3\\n";
+    }
+    const auto testDance=loadRetroAssetClip(retroTestRoot/"dancer",true);
+    CHECK(testDance.frames.size()==2);
+    CHECK(testDance.frames[0].size()==1);
+    CHECK(testDance.frame(0.0f).size()==1);
+    CHECK(std::abs(testDance.frame(1.0f/24.0f)[0].c.y-
+                   testDance.frame(0.0f)[0].c.y)>0.1f);
+    CHECK(loadRetroAssetClip(retroTestRoot/"missing",true).empty());
+    std::filesystem::remove_all(retroTestRoot,cleanupEc);
 
     // Shortcut popup uses two columns at fullscreen resolutions and switches
     // to paginated, scaled single-column help for smaller windowed previews.
