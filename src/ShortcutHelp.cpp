@@ -30,12 +30,13 @@ void helpText(SDL_Renderer* r, float baseScale, float x, float y,
     SDL_SetRenderScale(r, baseScale, baseScale);
 }
 
+template <std::size_t Count>
 void helpColumn(SDL_Renderer* r, float baseScale, float x, float top,
                 const char* heading,
-                const std::array<ShortcutHelpRow, 11>& entries) {
+                const std::array<ShortcutHelpRow, Count>& entries) {
     helpText(r, baseScale, x, top, heading, {105, 215, 229, 255}, 1.29f);
     for (std::size_t i = 0; i < entries.size(); ++i) {
-        const float y = top + 40.0f + 28.0f * static_cast<float>(i);
+        const float y = top + 40.0f + 21.0f * static_cast<float>(i);
         if ((i & 1u) == 0u) {
             helpBox(r, {x - 6.0f, y - 5.0f, 351.0f, 26.0f},
                     {35, 55, 75, 62});
@@ -129,9 +130,12 @@ void WallRenderer::drawShortcutHelp(const ScreenWindow& screen,
 
     if (layout.compact) {
         const bool visuals = layout.page == 0;
-        helpColumn(r, scale, panelX + 24, panelY + 85,
-                   visuals ? "DISPLAY & VISUALS" : "LAYOUT / AUDIO / EXIT",
-                   visuals ? kVisualShortcuts : kControlShortcuts);
+        if(visuals)
+            helpColumn(r, scale, panelX + 24, panelY + 85,
+                       "DISPLAY & VISUALS",kVisualShortcuts);
+        else
+            helpColumn(r, scale, panelX + 24, panelY + 85,
+                       "LAYOUT / AUDIO / EXIT",kControlShortcuts);
     } else {
         helpStroke(r, panelX + 400, panelY + 81,
                    panelX + 400, panelY + 405,
