@@ -46,7 +46,8 @@ int main() {
     CHECK(compactWrapped.page == 1);
     const auto tinyHelp = shortcutHelpLayout(350.0f, 300.0f, 0);
     CHECK(tinyHelp.compact && tinyHelp.scale > 0.0f && tinyHelp.scale < 1.0f);
-    CHECK(kVisualShortcuts.size() == kControlShortcuts.size());
+    CHECK(kVisualShortcuts.size() == 11);
+    CHECK(kControlShortcuts.size() == 14);
     for (const auto& item : kVisualShortcuts) {
         CHECK(item.key != nullptr && item.key[0] != '\0');
         CHECK(item.description != nullptr && item.description[0] != '\0');
