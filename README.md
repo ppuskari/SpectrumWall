@@ -103,6 +103,108 @@ The default is **128 bands**. You can choose any integer from 64 to 256 when lau
 
 Press **[** and **]** to change the count in increments of 16, or **B** to cycle through 64, 96, 128, 192 and 256. All active screens update together without restarting Realtek capture. Each fullscreen view shows a small `N BANDS` indicator.
 
+### Personal retro 3D models (local assets, excluded from GitHub)
+
+The rotating model overlays are optional and default to **Off**. Cycle
+**K** through Off → Dancing Baby homage → Cola can → Both; press **U**
+to toggle bass/beat response and **I** to choose small, medium, or large.
+Only the **center monitor** draws the 3D models. Hybrid spectrums, RMS
+meters, engineering overlays and the F1/right-click menu still work.
+
+All 3D model data is looked up in an **ignored folder beside
+SpectrumWall.exe**, regardless of your PowerShell current directory:
+
+```text
+SpectrumWall/
+  SpectrumWall.exe
+  SDL3.dll
+  SpectrumWall.ini
+  assets/
+    retro3d/                   <-- ignored by Git; never uploaded
+      dancer/
+        frames/
+          frame_0000.obj
+          frame_0000.mtl
+          frame_0001.obj
+          frame_0001.mtl
+          ...                  (optional PNG/JPEG/BMP textures)
+      can/
+        can.obj
+        can.mtl
+        label.png              (or other referenced textures)
+```
+
+The model loader supports triangulated or polygonal **Wavefront OBJ**
+meshes, `MTL` diffuse colors and `map_Kd` texture maps. It decodes
+**PNG/JPEG/BMP** textures through native Windows WIC, without requiring
+another runtime DLL. It automatically normalizes the models' dimensions
+and keeps the first animation frame's center for consistent dance motion.
+It loads at most 96 numerically sorted animation frames for safety;
+use zero-padded names and export at about **24 fps**. It does not
+directly import native `.max`, `.bip`, `.blend`, `.fbx` or
+`.glb` files, nor does it interpret Biped skeletal animations at
+runtime. If no local OBJ files are present, a built-in original,
+procedural dancer/can stand-in is used rather than crashing.
+
+**Original model sources to investigate:**
+
+- The 1996 Dancing Baby source is generally known as
+  `sk_baby.max` (3ds Max/Character Studio). A downloadable
+  `SK_BABY` model is listed on
+  [Sketchfab](https://sketchfab.com/3d-models/sk-baby-d4d9e3479363441883d8cec0fb1a7cb6).
+  A [Blender remaster of the original](https://www.youtube.com/watch?v=l5q4QARCQ54)
+  states that the original dance was exported and baked into a Blender
+  project; check the creator's description for their project download.
+- A [Coca-Cola can mesh in OBJ/FBX](https://free3d.com/3d-model/coca-cola-can-8270.html)
+  is also available for personal sourcing. It is not verified as the
+  original historical 3dfx demo can.
+- Download and inspect those files yourself. None is fetched by the
+  executable, published in the GitHub repository, or included in
+  the portable Windows ZIP.
+
+For a static can in **OBJ + MTL** format, place the files under
+`assets/retro3d/can/` and rename the main mesh to `can.obj`,
+keeping the texture filenames referenced in the MTL. For `.blend`
+or converted animated `.fbx` assets, use Blender's background-mode
+export script, which evaluates the armature at each animation frame
+and writes the deformed OBJ geometry:
+
+```powershell
+blender -b "DancingBaby.blend" -P tools/export_blender_retro3d.py -- dancer "C:/SpectrumWall/assets/retro3d/dancer" 72
+blender -b "CokeCan.blend" -P tools/export_blender_retro3d.py -- can "C:/SpectrumWall/assets/retro3d/can"
+```
+
+Use the actual directory containing your `SpectrumWall.exe` in place
+of `C:/SpectrumWall`, and adjust Blender's path/filename to your setup.
+A historical `.max` file first requires conversion in a compatible
+3ds Max installation; Blender does not natively import Character Studio
+Biped data. The exported OBJ sequences represent baked geometry, not
+editable skeletons, and the resulting dance can be accelerated by
+music onsets. Textures survive only to the extent the source's
+materials/exporter supply compatible image maps; test the material
+rendering on your system.
+
+Startup overrides:
+
+```powershell
+.\\SpectrumWall.exe --retro3d both --retro3d-size medium
+.\\SpectrumWall.exe --retro3d baby --no-retro3d-beat
+.\\SpectrumWall.exe --retro3d off
+```
+
+The following keys are saved in `SpectrumWall.ini` when you exit:
+
+```ini
+retro3d=3
+retro3d_beat=1
+retro3d_size=1
+```
+
+These *settings* are safe to commit, but the model and texture files
+remain excluded by `.gitignore`. This keeps the repository free of
+third-party model data regardless of its public/private visibility.
+Your personal use of assets does not automatically change their licenses.
+
 ### Shortcut help overlay
 
 **Right-click anywhere on a SpectrumWall monitor** to open a keyboard
