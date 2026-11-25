@@ -26,10 +26,16 @@ add_executable(SpectrumWall
     src/WallLines.cpp
     src/EngineeringOverlay.cpp
     src/ShortcutHelp.cpp
+    src/Retro3DRenderer.cpp
+    src/RetroAssets.cpp
+    src/RetroTexture.cpp
     src/SettingsStore.cpp
 )
 target_include_directories(SpectrumWall PRIVATE src "${miniaudio_SOURCE_DIR}")
 target_link_libraries(SpectrumWall PRIVATE SDL3::SDL3)
+if(WIN32)
+    target_link_libraries(SpectrumWall PRIVATE windowscodecs ole32)
+endif()
 if(WIN32)
     target_compile_definitions(SpectrumWall PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
 endif()
@@ -56,6 +62,7 @@ if(BUILD_TESTING)
         tests/spectrum_bands.cpp
         src/SpectrumAnalyzer.cpp
         src/SettingsStore.cpp
+        src/RetroAssets.cpp
     )
     target_include_directories(SpectrumWallBandTests PRIVATE src "${miniaudio_SOURCE_DIR}")
     if(WIN32)
