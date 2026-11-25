@@ -339,6 +339,8 @@ void WallRenderer::drawScreen(ScreenWindow& screen, const VisualState& state,
     case ScreenRole::Center: drawCenter(r, w, h, state, theme); break;
     case ScreenRole::Waterfall: drawWaterfall(r, w, h, state.bandCount, theme); break;
     }
+    if (screen.role == ScreenRole::Center)
+        drawRetro3D(r, w, h);
     if (engineeringEnabled_)
         drawEngineeringOverlay(screen, state, w, h);
     if (screen.role == ScreenRole::Center && stereoBalanceEnabled_)
@@ -386,6 +388,23 @@ void WallRenderer::draw(const VisualState& state, int theme, float dt,
         combined[i] = std::max(state.left[i], state.right[i]);
     history_.push_back(combined);
     if (history_.size() > 180) history_.pop_front();
+    // One animation clock for all monitors, independent of rendering speed.
+    // Rising bass transients kick the dance pose; smoother bass energy also
+    // expands motion and accelerates the can temporarily.
+    const float elapsed=std::clamp(dt,0.0f,0.10f);
+    retro3dTime_ += elapsed;
+    retro3dBeatCooldown_ = std::max(0.0f,retro3dBeatCooldown_-elapsed);
+    const float target=retroBeatTarget(state.bassPulse,retro3dBeatReactive_);
+    retro3dEnergy_=retroBeatSlew(retro3dEnergy_,target,elapsed);
+    const bool beat=retro3dBeatReactive_ &&
+        retro3dBeatCooldown_<=0.0f &&
+        target>0.33f && target>retro3dLastPulse_+0.11f;
+    if(beat) {
+        retro3dDancePhase_ += 0.42f;
+        retro3dBeatCooldown_ = 0.24f;
+    }
+    retro3dDancePhase_ += elapsed*(4.9f+retro3dEnergy_*2.3f);
+    retro3dLastPulse_=target;
     for (auto& s : screens_) drawScreen(s, state, theme, smoothing);
 }
 } // namespace spectrum
