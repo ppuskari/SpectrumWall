@@ -124,6 +124,12 @@ SessionSettings readSessionSettings(const std::filesystem::path& filename,
             setBool(value, result.centerMirror);
         } else if (key == "right_portrait_mirror") {
             setBool(value, result.rightPortraitMirror);
+        } else if (key == "retro3d") {
+            setNumber(value, result.retro3d, 0, 3);
+        } else if (key == "retro3d_beat") {
+            setBool(value, result.retro3dBeat);
+        } else if (key == "retro3d_size") {
+            setNumber(value, result.retro3dSize, 0, 2);
         } else if (key == "fourth") {
             setBool(value, result.fourth);
         } else if (key == "windowed") {
@@ -167,6 +173,9 @@ bool writeSessionSettings(const std::filesystem::path& filename,
                << "particles=" << (settings.particles ? 1 : 0) << '\n'
                << "center_mirror=" << (settings.centerMirror ? 1 : 0) << '\n'
                << "right_portrait_mirror=" << (settings.rightPortraitMirror ? 1 : 0) << '\n'
+               << "retro3d=" << std::clamp(settings.retro3d, 0, 3) << '\n'
+               << "retro3d_beat=" << (settings.retro3dBeat ? 1 : 0) << '\n'
+               << "retro3d_size=" << std::clamp(settings.retro3dSize, 0, 2) << '\n'
                << "fourth=" << (settings.fourth ? 1 : 0) << '\n'
                << "windowed=" << (settings.windowed ? 1 : 0) << '\n'
                << "demo=" << (settings.demo ? 1 : 0) << '\n'
