@@ -41,12 +41,12 @@ int main() {
     std::filesystem::create_directories(retroTestRoot / "dancer" / "frames");
     {
         std::ofstream mtl(retroTestRoot / "can" / "sample.mtl");
-        mtl << "newmtl cola\\nKd 1.0 0.2 0.15\\nmap_Kd label.png\\n";
+        mtl << "newmtl cola\nKd 1.0 0.2 0.15\nmap_Kd label.png\n";
         std::ofstream obj(retroTestRoot / "can" / "can.obj");
-        obj << "mtllib sample.mtl\\n"
-            << "v -1 0 0\\nv 1 0 0\\nv 0 2 0\\n"
-            << "vt 0 0\\nvt 1 0\\nvt 0.5 1\\n"
-            << "usemtl cola\\nf 1/1 2/2 3/3\\n";
+        obj << "mtllib sample.mtl\n"
+            << "v -1 0 0\nv 1 0 0\nv 0 2 0\n"
+            << "vt 0 0\nvt 1 0\nvt 0.5 1\n"
+            << "usemtl cola\nf 1/1 2/2 3/3\n";
     }
     const auto testCan=loadRetroAssetClip(retroTestRoot/"can",false);
     CHECK(testCan.frames.size()==1);
@@ -59,8 +59,8 @@ int main() {
     for(int frame=0;frame<2;++frame){
         std::ofstream obj(retroTestRoot/"dancer"/"frames"/
                           ("frame_000"+std::to_string(frame)+".obj"));
-        obj << "v 0 0 0\\nv 1 0 0\\nv 0 "
-            << (frame==0?1:2) << " 0\\nf 1 2 3\\n";
+        obj << "v 0 0 0\nv 1 0 0\nv 0 "
+            << (frame==0?1:2) << " 0\nf 1 2 3\n";
     }
     const auto testDance=loadRetroAssetClip(retroTestRoot/"dancer",true);
     CHECK(testDance.frames.size()==2);
