@@ -15,3 +15,6 @@ Thumbs.db
 # Local user preferences beside SpectrumWall.exe
 SpectrumWall.ini
 SpectrumWall.ini.tmp
+
+# Third-party / personal retro 3D models and textures: NEVER publish
+assets/retro3d/
