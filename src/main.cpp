@@ -37,6 +37,9 @@ struct Options {
     bool particles = true;
     bool centerMirror = true;
     bool rightPortraitMirror = true;
+    Retro3DMode retro3d = Retro3DMode::Off;
+    bool retro3dBeat = true;
+    int retro3dSize = 1;
     bool noSave = false;
     std::string source;
 };
@@ -64,6 +67,32 @@ Options parse(int argc, char** argv, Options options) {
         else if (flag == "--no-engineering") options.engineering = false;
         else if (flag == "--stereo-balance") options.balance = true;
         else if (flag == "--no-stereo-balance") options.balance = false;
+        else if (flag == "--retro3d-beat") options.retro3dBeat = true;
+        else if (flag == "--no-retro3d-beat") options.retro3dBeat = false;
+        else if (flag == "--retro3d" && i + 1 < argc) {
+            const std::string mode = argv[++i];
+            if (mode == "off") options.retro3d = Retro3DMode::Off;
+            else if (mode == "dancer" || mode == "baby")
+                options.retro3d = Retro3DMode::Dancer;
+            else if (mode == "can") options.retro3d = Retro3DMode::Can;
+            else if (mode == "both") options.retro3d = Retro3DMode::Both;
+            else {
+                std::fprintf(stderr, "Invalid --retro3d '%s' (off|baby|can|both).\n",
+                             mode.c_str());
+                options.valid = false;
+            }
+        }
+        else if (flag == "--retro3d-size" && i + 1 < argc) {
+            const std::string size = argv[++i];
+            if (size == "small") options.retro3dSize = 0;
+            else if (size == "medium") options.retro3dSize = 1;
+            else if (size == "large") options.retro3dSize = 2;
+            else {
+                std::fprintf(stderr, "Invalid --retro3d-size '%s' (small|medium|large).\n",
+                             size.c_str());
+                options.valid = false;
+            }
+        }
         else if (flag == "--windowed") options.windowed = true;
         else if (flag == "--fullscreen") options.windowed = false;
         else if (flag == "--list-devices") options.list = true;
@@ -132,12 +161,15 @@ Options parse(int argc, char** argv, Options options) {
                       " [--fourth] [--windowed] [--list-devices] [--bands 64..256]"
                       " [--palette 1..8] [--smoothing fast|balanced|liquid]"
                       " [--visual led|lines|hybrid] [--engineering] [--stereo-balance]"
+                      " [--retro3d off|baby|can|both] [--retro3d-size small|medium|large]"
+                      " [--retro3d-beat] [--no-retro3d-beat]"
                       " [--defaults] [--no-save]");
             std::puts("Keys: Esc/Q quit; N next source; L toggle input/loopback;"
                       " D demo; 1..8/C palette; S smoothing; F frequency soften;"
                       " G glow; T trails; R reflections; P particles; V visual style; M center mirror;"
                       " H right portrait mirror; E engineering axes; J stereo balance;"
-                      " [/] bands; B presets; F1 / right click shortcut help; config auto-saves on exit");
+                      " [/] bands; B presets; K 3D model; U beat response; I 3D size;"
+                      " F1 / right click shortcut help; config auto-saves on exit");
             options.list = true;
         }
     }
@@ -193,6 +225,9 @@ int main(int argc, char** argv) {
         initial.particles = saved.particles;
         initial.centerMirror = saved.centerMirror;
         initial.rightPortraitMirror = saved.rightPortraitMirror;
+        initial.retro3d = static_cast<Retro3DMode>(saved.retro3d);
+        initial.retro3dBeat = saved.retro3dBeat;
+        initial.retro3dSize = saved.retro3dSize;
         initial.fourth = saved.fourth;
         initial.windowed = saved.windowed;
         initial.demo = saved.demo;
@@ -233,7 +268,7 @@ int main(int argc, char** argv) {
                         "ESC/Q quit | N next audio | L loopback | D demo | 1-8 palettes |"
                         " S smoothing | F soften | G glow | T trails | R reflections |"
                         " P particles | V visual | M center mirror | H right mirror |"
-                        " E engineering | J balance | F1 / right click help | [/] bands | B presets\n",
+                        " E engineering | J balance | K 3D | U beat | I size | F1 help | [/] bands | B presets\n",
                         wall.screenCount());
             wall.setSpectrumStyle(options.visual);
             wall.setEngineering(options.engineering);
@@ -244,6 +279,11 @@ int main(int argc, char** argv) {
             wall.setParticles(options.particles);
             wall.setCenterMirror(options.centerMirror);
             wall.setRightPortraitMirror(options.rightPortraitMirror);
+            wall.setRetro3DMode(options.retro3d);
+            wall.setRetro3DBeat(options.retro3dBeat);
+            wall.setRetro3DSize(options.retro3dSize);
+            wall.setRetroAssetsRoot(settingsPath.parent_path() /
+                                    "assets" / "retro3d");
             SpectrumAnalyzer analyzer(options.bands);
             analyzer.setSmoothingMode(options.smoothing);
             analyzer.setSpectralSoftening(options.spectralSoftening);
@@ -386,6 +426,21 @@ int main(int argc, char** argv) {
                         std::printf("\nEngineering axes and live probe: %s\n",
                                     wall.engineeringEnabled() ? "ON" : "OFF");
                         break;
+                    case SDLK_K:
+                        wall.cycleRetro3DMode();
+                        std::printf("\nRetro3D: %s\n",
+                                    retro3dModeName(wall.retro3dMode()));
+                        break;
+                    case SDLK_U:
+                        wall.toggleRetro3DBeat();
+                        std::printf("\nRetro3D beat response: %s\n",
+                                    wall.retro3dBeatReactive() ? "ON" : "OFF");
+                        break;
+                    case SDLK_I:
+                        wall.cycleRetro3DSize();
+                        std::printf("\nRetro3D size: %d (0 small, 1 medium, 2 large)\n",
+                                    wall.retro3dSize());
+                        break;
                     case SDLK_J:
                         wall.toggleStereoBalance();
                         std::printf("\nStereo RMS balance meter: %s\n",
@@ -460,6 +515,9 @@ int main(int argc, char** argv) {
                 finalSettings.particles = wall.particlesEnabled();
                 finalSettings.centerMirror = wall.centerMirrored();
                 finalSettings.rightPortraitMirror = wall.rightPortraitMirrored();
+                finalSettings.retro3d = static_cast<int>(wall.retro3dMode());
+                finalSettings.retro3dBeat = wall.retro3dBeatReactive();
+                finalSettings.retro3dSize = wall.retro3dSize();
                 finalSettings.fourth = options.fourth;
                 finalSettings.windowed = options.windowed;
                 finalSettings.demo = demo;
