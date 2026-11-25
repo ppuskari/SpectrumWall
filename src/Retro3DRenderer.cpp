@@ -275,7 +275,7 @@ void WallRenderer::setRetroAssetsRoot(const std::filesystem::path& root) {
     setup(retroDancerClip_,retroDancerTextures_);
     setup(retroCanClip_,retroCanTextures_);
     std::printf("Retro3D local assets: dancer=%zu frames (%zu textures), "
-                "can=%zu frames (%zu textures)\\n",
+                "can=%zu frames (%zu textures)\n",
                 retroDancerClip_.frames.size(),retroDancerTextures_.size(),
                 retroCanClip_.frames.size(),retroCanTextures_.size());
 }
