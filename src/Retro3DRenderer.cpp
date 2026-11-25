@@ -1,9 +1,13 @@
 #include "WallRenderer.hpp"
 #include "Retro3D.hpp"
+#include "RetroAssets.hpp"
+#include "RetroTexture.hpp"
 #include <SDL3/SDL.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdio>
+#include <filesystem>
 #include <numbers>
 #include <vector>
 
@@ -175,9 +179,10 @@ void canMesh(RetroMesh& dst,float pulse) {
 struct SortFace {
     std::array<SDL_Vertex,3> verts;
     float depth=0.0f;
+    int textureId=-1;
 };
 SDL_Vertex project(RetroVec3 v,float originX,float originY,float base,
-                   RetroColor tint,float shade) {
+                   RetroColor tint,float shade,RetroVec2 uv) {
     const float k=base/std::max(1.1f,4.7f-v.z);
     SDL_Vertex out{};
     out.position={originX+v.x*k,originY-v.y*k};
@@ -185,13 +190,14 @@ SDL_Vertex project(RetroVec3 v,float originX,float originY,float base,
                std::clamp(tint.g*shade/255.0f,0.0f,1.0f),
                std::clamp(tint.b*shade/255.0f,0.0f,1.0f),
                tint.a/255.0f};
-    out.tex_coord={0.0f,0.0f};
+    out.tex_coord={uv.u,uv.v};
     return out;
 }
 
-void renderObject(SDL_Renderer* r,const RetroMesh& mesh,float originX,
-                  float originY,float base,float yaw,float pitch,float roll,
-                  float bounce) {
+void renderObject(SDL_Renderer* r,const RetroMesh& mesh,
+                  const std::vector<SDL_Texture*>& textures,
+                  float originX,float originY,float base,
+                  float yaw,float pitch,float roll,float bounce) {
     std::vector<SortFace> faces;
     faces.reserve(mesh.size());
     for(const auto& t:mesh) {
@@ -209,49 +215,98 @@ void renderObject(SDL_Renderer* r,const RetroMesh& mesh,float originX,
         const float shade=0.48f+0.50f*light;
         SortFace face;
         face.depth=(a.z+b.z+c.z)/3.0f;
-        face.verts={project(a,originX,originY,base,t.color,shade),
-                    project(b,originX,originY,base,t.color,shade),
-                    project(c,originX,originY,base,t.color,shade)};
+        const bool textured=t.textureId>=0 &&
+            static_cast<std::size_t>(t.textureId)<textures.size() &&
+            textures[t.textureId]!=nullptr;
+        face.textureId=textured?t.textureId:-1;
+        // Textured faces use white vertex tint so the original material
+        // artwork remains recognizable, with a subtle Lambert light.
+        const RetroColor tint=textured?RetroColor{255,255,255,t.color.a}:t.color;
+        face.verts={project(a,originX,originY,base,tint,shade,t.uvA),
+                    project(b,originX,originY,base,tint,shade,t.uvB),
+                    project(c,originX,originY,base,tint,shade,t.uvC)};
         faces.push_back(face);
     }
     // Back-to-front sorted painter pass; depth occlusion is good enough for
     // two separately spaced lightweight retro objects and works with SDL3.
     std::sort(faces.begin(),faces.end(),
         [](const SortFace& a,const SortFace& b){return a.depth<b.depth;});
+    // Preserve global painter-order, even if triangles use different source
+    // textures. Flush only when material switches to avoid reordering faces.
     std::vector<SDL_Vertex> geometry;
-    geometry.reserve(faces.size()*3);
-    for(const auto& f:faces)
-        geometry.insert(geometry.end(),f.verts.begin(),f.verts.end());
-    if(!geometry.empty())
-        SDL_RenderGeometry(r,nullptr,geometry.data(),
+    geometry.reserve(std::min(faces.size()*3,std::size_t{24000}));
+    int active=-2;
+    auto flush=[&] {
+        if(geometry.empty()) return;
+        SDL_Texture* texture=active>=0 &&
+              static_cast<std::size_t>(active)<textures.size()
+                  ? textures[active] : nullptr;
+        SDL_RenderGeometry(r,texture,geometry.data(),
                            static_cast<int>(geometry.size()),nullptr,0);
+        geometry.clear();
+    };
+    for(const auto& f:faces) {
+        if(f.textureId!=active){flush();active=f.textureId;}
+        geometry.insert(geometry.end(),f.verts.begin(),f.verts.end());
+        if(geometry.size()>=24000)flush();
+    }
+    flush();
 }
 } // namespace
 
+void WallRenderer::setRetroAssetsRoot(const std::filesystem::path& root) {
+    // Asset paths are intentionally local-only and live next to the EXE.
+    // No recursive directory search and no content is uploaded to GitHub.
+    retroDancerClip_=loadRetroAssetClip(root/"dancer",true);
+    retroCanClip_=loadRetroAssetClip(root/"can",false);
+    const auto it=std::find_if(screens_.begin(),screens_.end(),
+            [](const ScreenWindow& screen){
+                return screen.role==ScreenRole::Center;
+            });
+    if(it==screens_.end())return;
+    SDL_Renderer* renderer=it->renderer;
+    auto setup=[&](const RetroAssetClip& clip,
+                    std::vector<SDL_Texture*>& output) {
+        for(auto* tex:output)if(tex)SDL_DestroyTexture(tex);
+        output.clear();
+        for(const auto& texture:clip.textures)
+            output.push_back(retroLoadTexture(renderer,texture));
+    };
+    setup(retroDancerClip_,retroDancerTextures_);
+    setup(retroCanClip_,retroCanTextures_);
+    std::printf("Retro3D local assets: dancer=%zu frames (%zu textures), "
+                "can=%zu frames (%zu textures)\\n",
+                retroDancerClip_.frames.size(),retroDancerTextures_.size(),
+                retroCanClip_.frames.size(),retroCanTextures_.size());
+}
+
 void WallRenderer::drawRetro3D(SDL_Renderer* r,float w,float h) {
     if(retro3dMode_==Retro3DMode::Off)return;
-    // Two deliberately floating 3D objects across the top-center spectrums.
-    // Keep waveforms, VU metering, and engineering legends available below.
     const float base=std::min(w,h)*0.80f*retroSizeScale(retro3dSize_);
     const bool both=retro3dMode_==Retro3DMode::Both;
     const float pulse=retro3dEnergy_;
     if(retro3dMode_==Retro3DMode::Dancer || both) {
-        RetroMesh mesh;
-        dancer(mesh,retro3dDancePhase_,pulse);
+        RetroMesh generated;
+        if(retroDancerClip_.empty())dancer(generated,retro3dDancePhase_,pulse);
+        const RetroMesh& mesh=retroDancerClip_.empty()
+            ? generated : retroDancerClip_.frame(retro3dDancePhase_ /
+                                               kTau * 2.8f);
         const float x=w*(both?0.30f:0.50f);
         const float y=h*(0.37f+0.015f*std::sin(retro3dTime_*0.83f));
-        renderObject(r,mesh,x,y,base,
+        renderObject(r,mesh,retroDancerTextures_,x,y,base,
             std::sin(retro3dTime_*0.34f)*0.60f+0.16f*retro3dTime_,
             0.08f*std::sin(retro3dTime_*0.55f),
             0.06f*std::sin(retro3dDancePhase_),
             0.07f*std::sin(retro3dDancePhase_)+pulse*0.11f);
     }
     if(retro3dMode_==Retro3DMode::Can || both) {
-        RetroMesh mesh;
-        canMesh(mesh,pulse);
+        RetroMesh generated;
+        if(retroCanClip_.empty())canMesh(generated,pulse);
+        const RetroMesh& mesh=retroCanClip_.empty()
+            ?generated:retroCanClip_.frames.front();
         const float x=w*(both?0.71f:0.50f);
         const float y=h*(0.37f+0.02f*std::sin(retro3dTime_*0.76f+1.0f));
-        renderObject(r,mesh,x,y,base,
+        renderObject(r,mesh,retroCanTextures_,x,y,base,
             retro3dTime_*(0.62f+0.48f*pulse),
             0.18f+0.11f*std::sin(retro3dTime_*0.57f),
             0.18f*std::sin(retro3dTime_*0.49f),
