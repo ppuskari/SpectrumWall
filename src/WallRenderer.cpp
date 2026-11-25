@@ -44,6 +44,8 @@ const char* roleName(ScreenRole r) {
 }
 
 WallRenderer::~WallRenderer() {
+    for(auto* texture:retroDancerTextures_)if(texture)SDL_DestroyTexture(texture);
+    for(auto* texture:retroCanTextures_)if(texture)SDL_DestroyTexture(texture);
     for (auto& s : screens_) {
         if (s.glowTarget) SDL_DestroyTexture(s.glowTarget);
         if (s.renderer) SDL_DestroyRenderer(s.renderer);
