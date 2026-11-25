@@ -23,6 +23,9 @@ struct SessionSettings {
     bool particles = true;
     bool centerMirror = true;
     bool rightPortraitMirror = true;
+    int retro3d = 0;              // 0 off / 1 baby / 2 can / 3 both
+    bool retro3dBeat = true;
+    int retro3dSize = 1;          // 0 small / 1 medium / 2 large
     bool fourth = false;
     bool windowed = false;
     bool demo = false;
