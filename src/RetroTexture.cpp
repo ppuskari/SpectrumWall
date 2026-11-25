@@ -61,9 +61,9 @@ SDL_Texture* retroLoadTexture(SDL_Renderer* renderer,
     // SDL3 ships with a BMP decoder even without SDL_image.
     SDL_Surface* image=SDL_LoadBMP(filename.string().c_str());
     if(!image)return nullptr;
-    SDL_Texture* texture=SDL_CreateTextureFromSurface(renderer,image);
+    SDL_Texture* bitmapTexture=SDL_CreateTextureFromSurface(renderer,image);
     SDL_DestroySurface(image);
-    if(texture)SDL_SetTextureBlendMode(texture,SDL_BLENDMODE_BLEND);
-    return texture;
+    if(bitmapTexture)SDL_SetTextureBlendMode(bitmapTexture,SDL_BLENDMODE_BLEND);
+    return bitmapTexture;
 }
 } // namespace spectrum
