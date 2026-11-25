@@ -57,9 +57,12 @@ inline float retroPerspective(float dimension,float depth) {
 }
 
 struct RetroColor { unsigned char r=255,g=255,b=255,a=255; };
+struct RetroVec2 {float u=0.0f,v=0.0f;};
 struct RetroTriangle {
     RetroVec3 a,b,c;
     RetroColor color;
+    RetroVec2 uvA{},uvB{},uvC{};
+    int textureId=-1;
 };
 // Store triangles directly; at a few hundred faces per subject, triangle
 // sorting is inexpensive compared to capture/FFT even on an older RX580.
