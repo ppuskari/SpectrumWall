@@ -24,7 +24,7 @@ inline constexpr std::array<ShortcutHelpRow, 11> kVisualShortcuts {{
     {"[ / ]", "Band count -/+ 16"},
     {"B",     "Cycle band presets"}
 }};
-inline constexpr std::array<ShortcutHelpRow, 11> kControlShortcuts {{
+inline constexpr std::array<ShortcutHelpRow, 14> kControlShortcuts {{
     {"M",       "Center bass mirror"},
     {"H",       "Right portrait mirror"},
     {"E",       "Engineering axes/probe"},
@@ -32,6 +32,9 @@ inline constexpr std::array<ShortcutHelpRow, 11> kControlShortcuts {{
     {"N",       "Next audio source"},
     {"L",       "Capture / loopback"},
     {"D",       "Demo audio on/off"},
+    {"K",       "3D: off / baby / can / both"},
+    {"U",       "3D: beat response on/off"},
+    {"I",       "3D: small / medium / large"},
     {"F1 / RMB","Show / hide help"},
     {"TAB",     "Help page (small view)"},
     {"ESC",     "Close help / exit"},
