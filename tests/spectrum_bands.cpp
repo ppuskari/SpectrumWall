@@ -8,6 +8,7 @@
 #include "VisualStyle.hpp"
 #include "ParticleMath.hpp"
 #include "FireHeat.hpp"
+#include "FireAccents.hpp"
 #include <array>
 
 #include <cmath>
@@ -46,6 +47,40 @@ int main() {
     CHECK(FireHeatField::fireColor(0.9f)[0]>
           FireHeatField::fireColor(0.2f)[0]);
     CHECK(FireHeatField::fireColor(0.9f)[3]>200);
+    CHECK(FireHeatField::fireColor(0.75f,0) !=
+          FireHeatField::fireColor(0.75f,1));
+    CHECK(FireHeatField::fireColor(0.75f,1) !=
+          FireHeatField::fireColor(0.75f,2));
+    CHECK(FireHeatField::fireColor(0.75f,2) !=
+          FireHeatField::fireColor(0.75f,0));
+    CHECK(fireSpeedScale(0) < fireSpeedScale(1));
+    CHECK(fireSpeedScale(1) < fireSpeedScale(2));
+    CHECK(firePeakModeName(1)[0]=='F');
+    CHECK(firePaletteName(2)[0]=='P');
+
+    FirePeakTracker peakTracker;
+    std::array<float,kMaxBands> peakSignal{};
+    peakSignal[0]=0.72f;
+    peakTracker.advance(peakSignal,128,1,1.0f/60.0f);
+    CHECK(peakTracker.tip[0]>0.70f);
+    CHECK(peakTracker.tip[1]==0.0f);
+    peakSignal.fill(0.0f);
+    for(int t=0;t<8;++t)
+        peakTracker.advance(peakSignal,128,1,0.10f);
+    CHECK(peakTracker.tip[0]<0.01f);
+    peakTracker.reset();
+    peakSignal[0]=0.81f;
+    peakTracker.advance(peakSignal,128,2,0.016f);
+    peakSignal[0]=0.0f;
+    for(int t=0;t<5;++t)
+        peakTracker.advance(peakSignal,128,2,0.10f);
+    CHECK(peakTracker.tip[0]>0.80f);
+    for(int t=0;t<25;++t)
+        peakTracker.advance(peakSignal,128,2,0.10f);
+    CHECK(peakTracker.tip[0]<0.15f);
+    peakTracker.advance(peakSignal,64,0,0.016f);
+    CHECK(peakTracker.lastBands==64);
+    CHECK(peakTracker.tip[0]==0.0f);
 
     std::array<float,kMaxBands> fireSignal{};
     fireSignal[0]=1.0f; fireSignal[1]=0.9f; fireSignal[2]=0.8f;
@@ -165,7 +200,7 @@ int main() {
     CHECK(compactWrapped.page == 1);
     const auto tinyHelp = shortcutHelpLayout(350.0f, 300.0f, 0);
     CHECK(tinyHelp.compact && tinyHelp.scale > 0.0f && tinyHelp.scale < 1.0f);
-    CHECK(kVisualShortcuts.size() == 11);
+    CHECK(kVisualShortcuts.size() == 17);
     CHECK(kControlShortcuts.size() == 14);
     for (const auto& item : kVisualShortcuts) {
         CHECK(item.key != nullptr && item.key[0] != '\0');
@@ -350,6 +385,12 @@ int main() {
     settings.bands = 192;
     settings.palette = 7;
     settings.visual = 3;
+    settings.fire_palette = 2;
+    settings.fire_peaks = 2;
+    settings.fire_lines = true;
+    settings.fire_speed = 2;
+    settings.fire_quality = 0;
+    settings.fire_fourth = true;
     settings.smoothing = 2;
     settings.engineering = true;
     settings.stereoBalance = true;
@@ -370,6 +411,9 @@ int main() {
     CHECK(loaded);
     CHECK(restored.bands == 192 && restored.palette == 7);
     CHECK(restored.visual == 3 && restored.smoothing == 2);
+    CHECK(restored.fire_palette==2 && restored.fire_peaks==2);
+    CHECK(restored.fire_lines && restored.fire_speed==2);
+    CHECK(restored.fire_quality==0 && restored.fire_fourth);
     CHECK(restored.engineering && restored.stereoBalance);
     CHECK(!restored.spectralSoftening && restored.glow == 1);
     CHECK(!restored.trails && !restored.reflections && !restored.particles);
@@ -391,6 +435,9 @@ int main() {
     CHECK(loaded);
     CHECK(restored.bands == 64 && restored.palette == 1);
     CHECK(restored.visual == 0);
+    CHECK(restored.fire_palette==2 && restored.fire_peaks==2);
+    CHECK(restored.fire_lines && restored.fire_quality==0);
+    CHECK(restored.fire_fourth);
     CHECK(!restored.engineering && !restored.stereoBalance);
     CHECK(restored.centerMirror);
     CHECK(restored.source == settings.source);
