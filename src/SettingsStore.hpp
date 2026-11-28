@@ -26,6 +26,7 @@ struct SessionSettings {
     int fire_palette = 0; // 0 Classic / 1 Blue Gas / 2 Plasma
     int fire_peaks = 0; // 0 off / 1 flare / 2 hold
     bool fire_lines = false;
+    bool fire_meters = false; // aesthetic pilot flames only
     int fire_speed = 1; // 0 slow / 1 normal / 2 fast
     int fire_quality = 2; // 0 eco / 1 balanced / 2 high
     bool fire_fourth = false; // use optional fourth monitor for Fire stereo
