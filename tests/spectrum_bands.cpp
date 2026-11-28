@@ -200,7 +200,7 @@ int main() {
     CHECK(compactWrapped.page == 1);
     const auto tinyHelp = shortcutHelpLayout(350.0f, 300.0f, 0);
     CHECK(tinyHelp.compact && tinyHelp.scale > 0.0f && tinyHelp.scale < 1.0f);
-    CHECK(kVisualShortcuts.size() == 17);
+    CHECK(kVisualShortcuts.size() == 18);
     CHECK(kControlShortcuts.size() == 14);
     for (const auto& item : kVisualShortcuts) {
         CHECK(item.key != nullptr && item.key[0] != '\0');
@@ -388,6 +388,7 @@ int main() {
     settings.fire_palette = 2;
     settings.fire_peaks = 2;
     settings.fire_lines = true;
+    settings.fire_meters = true;
     settings.fire_speed = 2;
     settings.fire_quality = 0;
     settings.fire_fourth = true;
@@ -412,7 +413,8 @@ int main() {
     CHECK(restored.bands == 192 && restored.palette == 7);
     CHECK(restored.visual == 3 && restored.smoothing == 2);
     CHECK(restored.fire_palette==2 && restored.fire_peaks==2);
-    CHECK(restored.fire_lines && restored.fire_speed==2);
+    CHECK(restored.fire_lines && restored.fire_meters);
+    CHECK(restored.fire_speed==2);
     CHECK(restored.fire_quality==0 && restored.fire_fourth);
     CHECK(restored.engineering && restored.stereoBalance);
     CHECK(!restored.spectralSoftening && restored.glow == 1);
@@ -436,7 +438,8 @@ int main() {
     CHECK(restored.bands == 64 && restored.palette == 1);
     CHECK(restored.visual == 0);
     CHECK(restored.fire_palette==2 && restored.fire_peaks==2);
-    CHECK(restored.fire_lines && restored.fire_quality==0);
+    CHECK(restored.fire_lines && restored.fire_meters);
+    CHECK(restored.fire_quality==0);
     CHECK(restored.fire_fourth);
     CHECK(!restored.engineering && !restored.stereoBalance);
     CHECK(restored.centerMirror);
