@@ -130,6 +130,8 @@ SessionSettings readSessionSettings(const std::filesystem::path& filename,
             setNumber(value, result.fire_peaks, 0, 2);
         } else if (key == "fire_lines") {
             setBool(value, result.fire_lines);
+        } else if (key == "fire_meters") {
+            setBool(value, result.fire_meters);
         } else if (key == "fire_speed") {
             setNumber(value, result.fire_speed, 0, 2);
         } else if (key == "fire_quality") {
@@ -188,6 +190,7 @@ bool writeSessionSettings(const std::filesystem::path& filename,
                << "fire_palette=" << std::clamp(settings.fire_palette, 0, 2) << '\n'
                << "fire_peaks=" << std::clamp(settings.fire_peaks, 0, 2) << '\n'
                << "fire_lines=" << (settings.fire_lines ? 1 : 0) << '\n'
+               << "fire_meters=" << (settings.fire_meters ? 1 : 0) << '\n'
                << "fire_speed=" << std::clamp(settings.fire_speed, 0, 2) << '\n'
                << "fire_quality=" << std::clamp(settings.fire_quality, 0, 2) << '\n'
                << "fire_fourth=" << (settings.fire_fourth ? 1 : 0) << '\n'
