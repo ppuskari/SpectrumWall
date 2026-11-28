@@ -394,10 +394,26 @@ simulation.
 - **E**: calibrated dBFS and frequency engineering scales, hover probes,
   center lower RMS/sample-peak meters and channel balance indicators remain.
 - **K/U/I**: optional local 3D models continue to render as before.
-- The optional **fourth waterfall** remains its existing visual style;
-  it has not been converted to Fire.
-- Peak-hold lines, extra line overlays, and alternate fire palettes
-  are intentionally deferred until after visual feedback.
+- The optional **fourth waterfall** remains unchanged by default.
+  Press **W** in Fire mode to switch it to a stereo Fire view, with
+  calibrated engineering probes and lower meters; W toggles it back.
+- **X** cycles three independently colored Fire palettes: Classic,
+  Blue Gas (dark blue/cyan/white), and Plasma (purple/pink/orange).
+  These palettes also color the particles when Fire is active.
+- **Y** cycles flame-tip sprites OFF → FLASH → HOLD. FLASH creates
+  brief hot fire tips following rising FFT amplitudes; HOLD keeps them
+  longer before controlled decay. Neither changes the actual RMS/peak
+  meter values.
+- **; (semicolon)** independently enables a fine continuous flame-ridge
+  line (default OFF).
+- **Z** cycles thermal animation speed SLOW → NORMAL → FAST without
+  affecting audio capture or FFT analysis.
+- **O** cycles heat texture quality ECO → BALANCED → HIGH. HIGH is the
+  original Fire implementation, with a maximum 320×192 thermal texture
+  per pane; lower settings reduce CPU and GPU upload work.
+- **A** toggles optional flickering pilot flames **behind** the lower
+  calibrated RMS/peak meters; the original instruments remain drawn
+  above them and keep their exact dBFS mapping.
 
 Launch Fire and particles using your previous saved settings:
 
@@ -409,6 +425,32 @@ Press **P** if your saved configuration had disabled particles, then **V**
 to compare Fire against LED / Lines / Hybrid. The selected style is saved
 as `visual=3` to `SpectrumWall.ini` on normal exit. Existing INI files
 with `visual=0`, `1`, or `2` remain compatible.
+
+The new options remain **OFF or classic by default**, preserving the
+first Fire test appearance until you explicitly enable them:
+
+```ini
+fire_palette=0
+fire_peaks=0
+fire_lines=0
+fire_meters=0
+fire_speed=1
+fire_quality=2
+fire_fourth=0
+```
+
+Launch directly into an alternative configuration:
+
+```powershell
+.\\SpectrumWall.exe --visual fire --fire-palette blue --fire-peaks flash --fire-lines --fire-meters --fire-speed fast --fire-quality balanced
+.\\SpectrumWall.exe --visual fire --fourth --fire-fourth --fire-palette plasma --fire-peaks hold
+```
+
+The right-click/F1 shortcut popup and top-left HUD show current Fire
+settings. `P` particles, `E` engineering axes, `G` glow and
+`J` stereo bias remain separate controls. If using an optional fourth
+Fire screen, its engineering readouts work just like the center screen.
+In default waterfall mode its old presentation is preserved.
 
 ### Fire hardware verification
 
