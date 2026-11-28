@@ -87,6 +87,9 @@ public:
     void toggleFireLines() { fireLines_=!fireLines_; }
     void setFireLines(bool value) { fireLines_=value; }
     bool fireLines() const { return fireLines_; }
+    void toggleFireMeters() { fireMeters_=!fireMeters_; }
+    void setFireMeters(bool value) { fireMeters_=value; }
+    bool fireMeters() const { return fireMeters_; }
     void cycleFireSpeed() { fireSpeed_=(fireSpeed_+1)%3; }
     void setFireSpeed(int value) { fireSpeed_=std::clamp(value,0,2); }
     int fireSpeed() const { return fireSpeed_; }
@@ -141,6 +144,8 @@ private:
                       SDL_FRect plot,
                       const std::array<float,kMaxBands>& values,
                       std::size_t bands,bool mirror,float bassPulse,float dt);
+    void drawFirePilotMeter(SDL_Renderer* renderer,SDL_FRect plot,
+                            float smoothedRms,bool mirror);
     void drawFireAccents(ScreenWindow& screen, FireLayer& layer,
                          SDL_FRect plot,
                          const std::array<float,kMaxBands>& values,
@@ -206,6 +211,7 @@ private:
     int firePalette_ = 0; // 0 classic / 1 blue gas / 2 plasma
     int firePeaks_ = 0; // 0 off / 1 flashes / 2 hold
     bool fireLines_ = false;
+    bool fireMeters_ = false; // purely decorative pilot flames; dBFS bars untouched
     int fireSpeed_ = 1; // slow/normal/fast
     int fireQuality_ = 2; // eco/balanced/high (default unchanged)
     bool fireFourth_ = false; // optional fourth monitor flame stereo view
