@@ -103,7 +103,7 @@ SessionSettings readSessionSettings(const std::filesystem::path& filename,
         } else if (key == "palette") {
             setNumber(value, result.palette, 1, 8);
         } else if (key == "visual") {
-            setNumber(value, result.visual, 0, 2);
+            setNumber(value, result.visual, 0, 3);
         } else if (key == "smoothing") {
             setNumber(value, result.smoothing, 0, 2);
         } else if (key == "glow") {
@@ -162,7 +162,7 @@ bool writeSessionSettings(const std::filesystem::path& filename,
                << "bands=" << std::clamp(settings.bands,
                                         std::size_t{64}, std::size_t{256}) << '\n'
                << "palette=" << std::clamp(settings.palette, 1, 8) << '\n'
-               << "visual=" << std::clamp(settings.visual, 0, 2) << '\n'
+               << "visual=" << std::clamp(settings.visual, 0, 3) << '\n'
                << "smoothing=" << std::clamp(settings.smoothing, 0, 2) << '\n'
                << "engineering=" << (settings.engineering ? 1 : 0) << '\n'
                << "stereo_balance=" << (settings.stereoBalance ? 1 : 0) << '\n'
