@@ -2,6 +2,7 @@
 #include "SpectrumAnalyzer.hpp"
 #include "Retro3D.hpp"
 #include "RetroAssets.hpp"
+#include "FireHeat.hpp"
 #include <filesystem>
 #include <SDL3/SDL.h>
 #include <algorithm>
@@ -12,12 +13,13 @@
 
 namespace spectrum {
 enum class ScreenRole { Center, Left, Right, Waterfall };
-enum class SpectrumStyle { Led = 0, Lines = 1, Hybrid = 2 };
+enum class SpectrumStyle { Led = 0, Lines = 1, Hybrid = 2, Fire = 3 };
 inline const char* spectrumStyleName(SpectrumStyle style) {
     switch (style) {
     case SpectrumStyle::Led: return "LED";
     case SpectrumStyle::Lines: return "FLUID LINES";
     case SpectrumStyle::Hybrid: return "HYBRID";
+    case SpectrumStyle::Fire: return "FIRE";
     }
     return "LED";
 }
@@ -27,6 +29,11 @@ struct AudioSpark {
     float vx=0.0f, vy=0.0f; // normalized units per second
     float age=0.0f, life=1.0f, size=3.0f, heat=0.5f, frequency=0.5f;
     bool right=false;
+};
+
+struct FireLayer {
+    FireHeatField cpu{};
+    SDL_Texture* texture = nullptr;
 };
 
 struct ScreenWindow {
@@ -39,6 +46,7 @@ struct ScreenWindow {
     int glowHeight = 0;
     bool glowUnsupported = false;
     std::vector<AudioSpark> sparks{};
+    FireLayer leftFire{}, rightFire{};
     float sparkBudget=0.0f;
     std::uint32_t sparkRandomState=0x19d04b7du;
 };
@@ -64,7 +72,7 @@ public:
     void toggleParticles() { particlesEnabled_ = !particlesEnabled_; }
     void cycleSpectrumStyle() {
         spectrumStyle_ = static_cast<SpectrumStyle>(
-            (static_cast<int>(spectrumStyle_) + 1) % 3);
+            (static_cast<int>(spectrumStyle_) + 1) % 4);
     }
     void setSpectrumStyle(SpectrumStyle style) { spectrumStyle_ = style; }
     SpectrumStyle spectrumStyle() const { return spectrumStyle_; }
@@ -109,6 +117,10 @@ private:
                     SmoothingMode smoothing,float dt);
     void drawShortcutHelp(const ScreenWindow& screen, float width, float height);
     void drawRetro3D(SDL_Renderer* r,float width,float height);
+    void drawFirePane(ScreenWindow& screen, FireLayer& layer,
+                      SDL_FRect plot,
+                      const std::array<float,kMaxBands>& values,
+                      std::size_t bands,bool mirror,float bassPulse,float dt);
     void drawEngineeringOverlay(const ScreenWindow& screen,
                                 const VisualState& state, float w, float h);
     void drawStereoBalance(SDL_Renderer* renderer, float w, float h,
@@ -139,10 +151,10 @@ private:
                             const std::array<float, kMaxBands>& trails,
                             std::size_t bands, int palette, bool right,
                             bool mirror = false);
-    void drawPortrait(SDL_Renderer* r, float w, float h,
-                      const VisualState& state, bool left, int theme);
-    void drawCenter(SDL_Renderer* r, float w, float h,
-                    const VisualState& state, int theme);
+    void drawPortrait(ScreenWindow& screen, float w, float h,
+                      const VisualState& state, bool left, int theme,float dt);
+    void drawCenter(ScreenWindow& screen, float w, float h,
+                    const VisualState& state, int theme,float dt);
     void drawWaterfall(SDL_Renderer* r, float w, float h,
                        std::size_t bands, int theme);
     void drawSpectrum(SDL_Renderer* r, SDL_FRect rect,
