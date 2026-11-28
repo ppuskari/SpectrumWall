@@ -149,4 +149,47 @@ void WallRenderer::drawFireAccents(ScreenWindow& screen,FireLayer& layer,
                            static_cast<int>(mesh.size()),nullptr,0);
 }
 
+void WallRenderer::drawFirePilotMeter(SDL_Renderer* renderer,SDL_FRect plot,
+                                     float smoothedRms,bool mirror) {
+    if(!renderer || plot.w<4.0f || plot.h<1.0f) return;
+    // Decorative layer BEHIND the unmodified calibrated RMS/peak meter.
+    // Its horizontal filling agrees with the exact dBFS meter transform.
+    const float level=levelMeterSmoothedRmsFraction(smoothedRms);
+    constexpr int n=96;
+    std::vector<SDL_Vertex> points;
+    std::vector<int> indices;
+    points.reserve((n+1)*2);
+    indices.reserve(n*6);
+    const auto core=FireHeatField::fireColor(0.90f,firePalette_);
+    const auto edge=FireHeatField::fireColor(0.59f,firePalette_);
+    for(int i=0;i<=n;++i){
+        const float fraction=static_cast<float>(i)/n;
+        const float sample=mirror?1.0f-fraction:fraction;
+        const float active=std::clamp((level-sample)*24.0f+0.25f,0.0f,1.0f);
+        const float noise=0.52f+0.48f*std::sin(
+            static_cast<float>(i)*0.51f+retro3dTime_*10.0f);
+        const float height=(plot.h*0.80f+5.0f+8.0f*noise)*
+                           active*(0.65f+0.35f*level);
+        const float x=plot.x+plot.w*fraction;
+        auto vertex=[&](float y,const std::array<std::uint8_t,4>& c,
+                        float opacity)->SDL_Vertex {
+            SDL_Vertex v{};
+            v.position={x,y};
+            v.color={c[0]/255.0f,c[1]/255.0f,c[2]/255.0f,
+                     opacity*active};
+            return v;
+        };
+        points.push_back(vertex(plot.y-height,core,0.12f));
+        points.push_back(vertex(plot.y+plot.h,edge,0.58f));
+        if(i>0){
+            const int j=i*2;
+            indices.insert(indices.end(),
+                {j-2,j-1,j,j,j-1,j+1});
+        }
+    }
+    SDL_RenderGeometry(renderer,nullptr,points.data(),
+        static_cast<int>(points.size()),indices.data(),
+        static_cast<int>(indices.size()));
+}
+
 } // namespace spectrum
