@@ -12,7 +12,7 @@ struct SessionSettings {
     int version = 1;
     std::size_t bands = 128;
     int palette = 4;         // 1..8, human-facing numbers
-    int visual = 1;          // 0 LED / 1 lines / 2 hybrid
+    int visual = 1;          // 0 LED / 1 lines / 2 hybrid / 3 fire
     int smoothing = 1;       // 0 fast / 1 balanced / 2 liquid
     bool engineering = false;
     bool stereoBalance = false;
