@@ -14,7 +14,7 @@ struct ShortcutHelpRow {
 inline constexpr std::array<ShortcutHelpRow, 11> kVisualShortcuts {{
     {"1-8",   "Choose color palette"},
     {"C",     "Next palette"},
-    {"V",     "LED / Lines / Hybrid"},
+    {"V",     "LED / Lines / Hybrid / Fire"},
     {"S",     "Smoothing profile"},
     {"F",     "Frequency softening"},
     {"G",     "Glow off / soft / vivid"},
