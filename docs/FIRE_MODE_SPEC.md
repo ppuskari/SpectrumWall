@@ -1,8 +1,37 @@
 # SpectrumWall — Fire mode implementation design (proposal)
 
-Status: **design only**. The existing LED / Fluid Lines / Hybrid modes,
-WASAPI capture, 4096-point stereo FFT, dBFS scales and instrumentation are
-unchanged by this specification.
+Status: **first Fire mode implemented** on
+`feature/fire-heatfield-20261127`. The existing LED / Fluid Lines / Hybrid
+modes, WASAPI capture, 4096-point stereo FFT, calibrated dBFS scales and
+instrumentation are unchanged. This file retains implementation targets
+and future refinement opportunities, rather than claiming every idea
+below is already implemented.
+
+## Implemented first-pass behavior
+
+- `V` now cycles **LED → Lines → Hybrid → Fire**.
+- `--visual fire` is supported; `visual=3` saves/restores safely.
+- `src/FireHeat.hpp` holds a deterministic fixed-30 Hz, stereo-isolated
+  heat simulation with a maximum **320 × 192** pixel field per pane.
+  Upward advection, lateral turbulence, smoothed adjacent FFT envelopes,
+  amplitude gating and red→white-hot palette create continuous tongues.
+- `src/WallFire.cpp` uploads a streaming RGBA texture only when thermal
+  state changes, uses linear sampling, and draws an optional soft halo.
+  Fire does not reuse LED segments, peak-hold traces, curve glow or bar
+  reflections.
+- All three usual displays keep their independent spectrum sources and
+  frequency orientation; center L/R halves remain separate. The optional
+  fourth waterfall is unchanged.
+- Foreground `P` particles are still optional and emit as warm embers
+  while Fire is active. The **E** engineering layer, **J** balance gauge,
+  spectrum mouse probes, calibrated lower level meters, and F1 popup
+  remain above the fire field.
+- No traditional peak hold lines are drawn in Fire. Waveforms and
+  calibrated lower meters below the flame plots are retained.
+
+**Not yet implemented:** full GPU fluid physics, alternate flame color
+schemes, configurable peak-tip lifetime, fire-only line overlay controls,
+or dedicated fourth-monitor flame waterfall.
 
 ## Aesthetic and target
 
