@@ -263,6 +263,9 @@ void WallRenderer::drawPortrait(ScreenWindow& screen, float w, float h,
     drawWave(r, {pad, h * 0.84f, w - 2 * pad, h * 0.07f},
              left ? state.waveLeft : state.waveRight,
              left ? SDL_Color{ 63, 226, 232, 255 } : SDL_Color{ 228, 112, 249, 255 });
+    if(spectrumStyle_==SpectrumStyle::Fire && fireMeters_)
+        drawFirePilotMeter(r,{pad,h*0.94f,w-2*pad,h*0.015f},
+                           left?state.vuLeft:state.vuRight,false);
     drawLevel(r, {pad, h * 0.94f, w - 2 * pad, h * 0.015f},
               left ? state.vuLeft : state.vuRight,
               left ? state.peakLeft : state.peakRight, theme);
@@ -300,6 +303,12 @@ void WallRenderer::drawCenter(ScreenWindow& screen, float w, float h,
              { 60, 228, 245, 255 });
     drawWave(r, {pad, h * 0.77f, width, h * 0.115f}, state.waveRight,
              { 208, 113, 255, 255 });
+    if(spectrumStyle_==SpectrumStyle::Fire && fireMeters_) {
+        drawFirePilotMeter(r,{pad,h*0.927f,width*0.485f,h*0.025f},
+                           state.vuLeft,centerMirror_);
+        drawFirePilotMeter(r,{pad+width*0.515f,h*0.927f,
+                              width*0.485f,h*0.025f},state.vuRight,false);
+    }
     drawLevel(r, {pad, h * 0.927f, width * 0.485f, h * 0.025f},
               state.vuLeft, state.peakLeft, theme, centerMirror_);
     drawLevel(r, {pad + width * 0.515f, h * 0.927f, width * 0.485f, h * 0.025f},
@@ -402,6 +411,8 @@ void WallRenderer::drawScreen(ScreenWindow& screen, const VisualState& state,
             "SPEED %s | QUALITY %s | 4TH FIRE %s",
             fireSpeedName(fireSpeed_),fireQualityName(fireQuality_),
             fireFourth_?"ON":"OFF");
+        SDL_RenderDebugTextFormat(r,8.0f,87.0f,
+            "PILOT METERS %s",fireMeters_?"ON":"OFF");
     }
     SDL_SetRenderScale(r, 1.0f, 1.0f);
     // Context-help is intentionally the final UI layer, above engineering
