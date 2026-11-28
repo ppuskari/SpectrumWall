@@ -6,6 +6,7 @@
 #include "CurveSampling.hpp"
 #include "SpectrumLayout.hpp"
 #include "VisualStyle.hpp"
+#include "ParticleMath.hpp"
 #include <array>
 
 #include <cmath>
@@ -70,6 +71,32 @@ int main() {
                    testDance.frame(0.0f)[0].c.y)>0.1f);
     CHECK(loadRetroAssetClip(retroTestRoot/"missing",true).empty());
     std::filesystem::remove_all(retroTestRoot,cleanupEc);
+
+    // Foreground audio sparks: normalized FFT placement respects each
+    // mirrored panel, silence never emits, and glow fades monotonically.
+    CHECK(std::abs(sparkBandFraction(0,128,false)-
+                   0.5f/128.0f)<1.0e-6f);
+    CHECK(std::abs(sparkBandFraction(0,128,true)+
+                   sparkBandFraction(0,128,false)-1.0f)<1.0e-6f);
+    CHECK(std::abs(sparkBandFraction(127,128,true)-
+                   0.5f/128.0f)<1.0e-6f);
+    CHECK(sparkBandFraction(0,0,false)==0.5f);
+    CHECK(sparkEmissionRate(0.0f,0.0f)==0.0f);
+    CHECK(sparkEmissionRate(0.25f,0.0f)>0.0f);
+    CHECK(sparkEmissionRate(0.25f,0.55f)>
+          sparkEmissionRate(0.25f,0.0f));
+    CHECK(sparkEmissionRate(1.0f,1.0f)>
+          sparkEmissionRate(0.25f,0.55f));
+    CHECK(sparkFade(0.0f,1.0f)==1.0f);
+    CHECK(sparkFade(1.0f,1.0f)==0.0f);
+    CHECK(sparkFade(0.5f,1.0f)<sparkFade(0.1f,1.0f));
+    CHECK(sparkFade(0.1f,0.0f)==0.0f);
+    std::uint32_t seed=0x41c06a1du, copy=seed;
+    for(int i=0;i<64;++i){
+        const float v=sparkRandom(seed);
+        CHECK(v>=0.0f && v<1.0f);
+        CHECK(v==sparkRandom(copy));
+    }
 
     // Shortcut popup uses two columns at fullscreen resolutions and switches
     // to paginated, scaled single-column help for smaller windowed previews.
