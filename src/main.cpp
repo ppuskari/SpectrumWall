@@ -40,6 +40,7 @@ struct Options {
     int firePalette = 0;
     int firePeaks = 0;
     bool fireLines = false;
+    bool fireMeters = false;
     int fireSpeed = 1;
     int fireQuality = 2;
     bool fireFourth = false;
@@ -73,6 +74,8 @@ Options parse(int argc, char** argv, Options options) {
         else if (flag == "--no-engineering") options.engineering = false;
         else if (flag == "--stereo-balance") options.balance = true;
         else if (flag == "--no-stereo-balance") options.balance = false;
+        else if (flag == "--fire-meters") options.fireMeters = true;
+        else if (flag == "--no-fire-meters") options.fireMeters = false;
         else if (flag == "--fire-lines") options.fireLines = true;
         else if (flag == "--no-fire-lines") options.fireLines = false;
         else if (flag == "--fire-fourth") options.fireFourth = true;
@@ -207,7 +210,7 @@ Options parse(int argc, char** argv, Options options) {
                       " [--retro3d off|baby|can|both] [--retro3d-size small|medium|large]"
                       " [--retro3d-beat] [--no-retro3d-beat]"
                       " [--fire-palette classic|blue|plasma]"
-                      " [--fire-peaks off|flash|hold] [--fire-lines]"
+                      " [--fire-peaks off|flash|hold] [--fire-lines] [--fire-meters]"
                       " [--fire-speed slow|normal|fast]"
                       " [--fire-quality eco|balanced|high] [--fire-fourth]"
                       " [--defaults] [--no-save]");
@@ -217,7 +220,7 @@ Options parse(int argc, char** argv, Options options) {
                       " H right portrait mirror; E engineering axes; J stereo balance;"
                       " [/] bands; B presets; K 3D model; U beat response; I 3D size;"
                       " X fire palette; Y fire tips; ; fire lines; Z fire speed;"
-                      " O fire quality; W fourth fire;"
+                      " O fire quality; W fourth fire; A pilot meters;"
                       " F1 / right click shortcut help; config auto-saves on exit");
             options.list = true;
         }
@@ -277,6 +280,7 @@ int main(int argc, char** argv) {
         initial.firePalette = saved.fire_palette;
         initial.firePeaks = saved.fire_peaks;
         initial.fireLines = saved.fire_lines;
+        initial.fireMeters = saved.fire_meters;
         initial.fireSpeed = saved.fire_speed;
         initial.fireQuality = saved.fire_quality;
         initial.fireFourth = saved.fire_fourth;
@@ -337,6 +341,7 @@ int main(int argc, char** argv) {
             wall.setFirePalette(options.firePalette);
             wall.setFirePeaks(options.firePeaks);
             wall.setFireLines(options.fireLines);
+            wall.setFireMeters(options.fireMeters);
             wall.setFireSpeed(options.fireSpeed);
             wall.setFireQuality(options.fireQuality);
             wall.setFireFourth(options.fireFourth);
@@ -497,6 +502,11 @@ int main(int argc, char** argv) {
                         std::printf("\nFire render quality: %s\n",
                                     fireQualityName(wall.fireQuality()));
                         break;
+                    case SDLK_A:
+                        wall.toggleFireMeters();
+                        std::printf("\nFire pilot meters: %s\n",
+                                    wall.fireMeters()?"ON":"OFF");
+                        break;
                     case SDLK_W:
                         wall.toggleFireFourth();
                         std::printf("\nFourth monitor Fire stereo view: %s\n",
@@ -609,6 +619,7 @@ int main(int argc, char** argv) {
                 finalSettings.fire_palette = wall.firePalette();
                 finalSettings.fire_peaks = wall.firePeaks();
                 finalSettings.fire_lines = wall.fireLines();
+                finalSettings.fire_meters = wall.fireMeters();
                 finalSettings.fire_speed = wall.fireSpeed();
                 finalSettings.fire_quality = wall.fireQuality();
                 finalSettings.fire_fourth = wall.fireFourth();
