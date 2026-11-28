@@ -120,8 +120,9 @@ Options parse(int argc, char** argv, Options options) {
             if (mode == "led") options.visual = SpectrumStyle::Led;
             else if (mode == "lines") options.visual = SpectrumStyle::Lines;
             else if (mode == "hybrid") options.visual = SpectrumStyle::Hybrid;
+            else if (mode == "fire") options.visual = SpectrumStyle::Fire;
             else {
-                std::fprintf(stderr, "Unknown --visual '%s' (led/lines/hybrid).\n",
+                std::fprintf(stderr, "Unknown --visual '%s' (led/lines/hybrid/fire).\n",
                              mode.c_str());
                 options.valid = false;
             }
@@ -160,13 +161,13 @@ Options parse(int argc, char** argv, Options options) {
             std::puts("SpectrumWall [--source TEXT] [--loopback] [--demo]"
                       " [--fourth] [--windowed] [--list-devices] [--bands 64..256]"
                       " [--palette 1..8] [--smoothing fast|balanced|liquid]"
-                      " [--visual led|lines|hybrid] [--engineering] [--stereo-balance]"
+                      " [--visual led|lines|hybrid|fire] [--engineering] [--stereo-balance]"
                       " [--retro3d off|baby|can|both] [--retro3d-size small|medium|large]"
                       " [--retro3d-beat] [--no-retro3d-beat]"
                       " [--defaults] [--no-save]");
             std::puts("Keys: Esc/Q quit; N next source; L toggle input/loopback;"
                       " D demo; 1..8/C palette; S smoothing; F frequency soften;"
-                      " G glow; T trails; R reflections; P particles; V visual style; M center mirror;"
+                      " G glow; T trails; R reflections; P particles; V visual (incl Fire); M center mirror;"
                       " H right portrait mirror; E engineering axes; J stereo balance;"
                       " [/] bands; B presets; K 3D model; U beat response; I 3D size;"
                       " F1 / right click shortcut help; config auto-saves on exit");
@@ -267,7 +268,7 @@ int main(int argc, char** argv) {
             std::printf("SpectrumWall: %zu active screens. "
                         "ESC/Q quit | N next audio | L loopback | D demo | 1-8 palettes |"
                         " S smoothing | F soften | G glow | T trails | R reflections |"
-                        " P particles | V visual | M center mirror | H right mirror |"
+                        " P particles | V visual (+Fire) | M center mirror | H right mirror |"
                         " E engineering | J balance | K 3D | U beat | I size | F1 help | [/] bands | B presets\n",
                         wall.screenCount());
             wall.setSpectrumStyle(options.visual);
