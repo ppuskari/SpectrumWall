@@ -1,6 +1,7 @@
 #include "WallRenderer.hpp"
 #include "VisualStyle.hpp"
 #include "SpectrumLayout.hpp"
+#include "ParticleMath.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -53,22 +54,111 @@ void WallRenderer::drawReflections(SDL_Renderer* renderer, SDL_FRect plot,
     }
 }
 
-void WallRenderer::drawParticles(SDL_Renderer* renderer, float width, float height,
-                                 float pulse, int palette) {
-    if (!particlesEnabled_) return;
-    const float time = static_cast<float>(SDL_GetTicks()) * 0.001f;
-    for (int i = 0; i < 40; ++i) {
-        const float phase = static_cast<float>(i) * 12.9898f;
-        const float x = (0.5f + 0.49f *
-            std::sin(phase + time * (0.05f + (i % 4) * 0.018f))) * width;
-        const float y = (0.5f + 0.47f *
-            std::cos(phase * 0.73f + time * 0.055f)) * height;
-        const float level = std::clamp(pulse * 0.65f +
-            0.26f * std::abs(std::sin(phase + time)), 0.0f, 1.0f);
-        const Rgb c = paletteRgb(static_cast<float>(i) / 40.0f,
-                                 0.65f, level, palette);
-        fxRect(renderer, {x, y, 1.4f + level * 2.2f, 1.4f + level * 2.2f},
-               {c.r, c.g, c.b, static_cast<Uint8>(25 + level * 75)});
+void WallRenderer::drawParticles(ScreenWindow& screen,
+                                 const VisualState& state,float width,
+                                 float height,float dt,int palette) {
+    // Fire/Hybrid/LED/Lines share this independently swappable particle pass.
+    // Render AFTER the spectrum, BEFORE engineering legends and help.
+    if (!particlesEnabled_ || screen.role==ScreenRole::Waterfall) {
+        screen.sparks.clear();
+        screen.sparkBudget=0.0f;
+        return;
+    }
+    SDL_Renderer* renderer=screen.renderer;
+    const float elapsed=std::clamp(dt,0.0f,0.10f);
+    auto& sparks=screen.sparks;
+    sparks.erase(std::remove_if(sparks.begin(),sparks.end(),
+        [elapsed](AudioSpark& p) {
+            p.age+=elapsed;
+            p.x+=p.vx*elapsed;
+            p.y+=p.vy*elapsed;
+            p.vx*=std::exp(-elapsed*0.3f);
+            return p.age>=p.life || p.y < -0.08f || p.x < -0.1f || p.x>1.1f;
+        }),sparks.end());
+
+    const bool center=screen.role==ScreenRole::Center;
+    const bool rightPortrait=screen.role==ScreenRole::Right;
+    const float meanL=[&]() {
+        float sum=0;
+        for(std::size_t i=0;i<state.bandCount;++i)sum+=state.left[i];
+        return sum/static_cast<float>(std::max(state.bandCount,std::size_t{1}));
+    }();
+    const float meanR=[&]() {
+        float sum=0;
+        for(std::size_t i=0;i<state.bandCount;++i)sum+=state.right[i];
+        return sum/static_cast<float>(std::max(state.bandCount,std::size_t{1}));
+    }();
+    const float mean=center ? (meanL+meanR)*0.5f : 
+        rightPortrait?meanR:meanL;
+    screen.sparkBudget=std::min(7.0f,screen.sparkBudget+
+                       sparkEmissionRate(mean,state.bassPulse)*elapsed);
+    constexpr std::size_t kMaxSparks=160;
+    const float portraitPad=std::max(12.0f,width*0.027f);
+    const float centerPad=std::max(20.0f,width*0.026f);
+    const float centerWidth=width-2*centerPad;
+    for(int count=0;count<7 && screen.sparkBudget>=1.0f;++count) {
+        screen.sparkBudget-=1.0f;
+        if(sparks.size()>=kMaxSparks) break;
+
+        const bool right=rightPortrait ||
+            (center && sparkRandom(screen.sparkRandomState)>0.5f);
+        const auto& bands=right?state.right:state.left;
+        // Sample several potential launch points; prefer hot FFT bins.
+        std::size_t index=0;
+        float energy=0.0f;
+        for(int tryIndex=0;tryIndex<4;++tryIndex){
+            const auto candidate=std::min(
+                static_cast<std::size_t>(sparkRandom(screen.sparkRandomState)*
+                                        static_cast<float>(state.bandCount)),
+                state.bandCount-1);
+            if(bands[candidate]>energy){index=candidate;energy=bands[candidate];}
+        }
+        if(energy<0.075f)continue;
+
+        const bool mirror=center?(right?false:centerMirror_):
+                           rightPortrait?rightPortraitMirror_:false;
+        const float bandX=sparkBandFraction(index,state.bandCount,mirror);
+        const float plotX=center?
+                   (right?centerPad+centerWidth*0.505f:centerPad):
+                   portraitPad;
+        const float plotW=center?centerWidth*0.495f:width-2*portraitPad;
+        const float plotTop=center?height*0.055f:height*0.06f;
+        const float plotHeight=center?height*0.55f:height*0.75f;
+        const float jitter=sparkRandom(screen.sparkRandomState)-0.5f;
+        AudioSpark p{};
+        p.x=(plotX+plotW*bandX+jitter*std::min(plotW*0.022f,22.0f))/width;
+        p.y=(plotTop+plotHeight*(1.0f-std::clamp(energy,0.0f,1.0f)))/height;
+        const float randomDrift=sparkRandom(screen.sparkRandomState)-0.5f;
+        p.vx=randomDrift*(0.016f+0.025f*state.bassPulse);
+        p.vy=-(0.025f+0.095f*sparkRandom(screen.sparkRandomState)+
+               0.04f*state.bassPulse);
+        p.life=0.75f+1.15f*sparkRandom(screen.sparkRandomState);
+        p.size=(1.7f+3.3f*sparkRandom(screen.sparkRandomState)+
+                state.bassPulse*2.5f);
+        p.heat=std::clamp(energy+state.bassPulse*0.4f,0.0f,1.0f);
+        p.frequency=static_cast<float>(index)/
+                 static_cast<float>(std::max(state.bandCount-1,std::size_t{1}));
+        p.right=right;
+        sparks.push_back(p);
+    }
+
+    for(const auto& p:sparks){
+        const float alpha=sparkFade(p.age,p.life);
+        if(alpha<0.012f)continue;
+        const Rgb tint=paletteRgb(p.frequency,p.heat,
+                                  std::min(1.0f,p.heat+0.25f),palette,p.right);
+        const float x=p.x*width, y=p.y*height;
+        const float size=p.size*(0.78f+0.30f*p.heat);
+        // Soft halo, chromatic ring, then a clearly visible hot ember.
+        fxRect(renderer,{x-size*1.8f,y-size*1.8f,size*3.6f,size*3.6f},
+            {tint.r,tint.g,tint.b,
+             static_cast<Uint8>(std::clamp(alpha*29.0f,0.0f,255.0f))});
+        fxRect(renderer,{x-size*0.85f,y-size*0.85f,size*1.7f,size*1.7f},
+            {tint.r,tint.g,tint.b,
+             static_cast<Uint8>(std::clamp(alpha*125.0f,0.0f,255.0f))});
+        fxRect(renderer,{x-size*0.28f,y-size*0.28f,size*0.56f,size*0.56f},
+            {255,246,222,
+             static_cast<Uint8>(std::clamp(alpha*230.0f,0.0f,255.0f))});
     }
 }
 

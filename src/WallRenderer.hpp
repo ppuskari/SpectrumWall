@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <array>
 #include <deque>
+#include <cstdint>
 #include <vector>
 
 namespace spectrum {
@@ -21,6 +22,13 @@ inline const char* spectrumStyleName(SpectrumStyle style) {
     return "LED";
 }
 
+struct AudioSpark {
+    float x=0.0f, y=0.0f; // normalized viewport coordinates
+    float vx=0.0f, vy=0.0f; // normalized units per second
+    float age=0.0f, life=1.0f, size=3.0f, heat=0.5f, frequency=0.5f;
+    bool right=false;
+};
+
 struct ScreenWindow {
     ScreenRole role = ScreenRole::Center;
     SDL_Window* window = nullptr;
@@ -30,6 +38,9 @@ struct ScreenWindow {
     int glowWidth = 0;
     int glowHeight = 0;
     bool glowUnsupported = false;
+    std::vector<AudioSpark> sparks{};
+    float sparkBudget=0.0f;
+    std::uint32_t sparkRandomState=0x19d04b7du;
 };
 
 class WallRenderer {
@@ -95,7 +106,7 @@ public:
 
 private:
     void drawScreen(ScreenWindow& screen, const VisualState& state, int palette,
-                    SmoothingMode smoothing);
+                    SmoothingMode smoothing,float dt);
     void drawShortcutHelp(const ScreenWindow& screen, float width, float height);
     void drawRetro3D(SDL_Renderer* r,float width,float height);
     void drawEngineeringOverlay(const ScreenWindow& screen,
@@ -110,7 +121,8 @@ private:
     void drawReflections(SDL_Renderer* r, SDL_FRect plot,
                          const std::array<float, kMaxBands>& values,
                          std::size_t bands, int palette, bool right, bool mirror = false);
-    void drawParticles(SDL_Renderer* r, float w, float h, float pulse, int palette);
+    void drawParticles(ScreenWindow& screen, const VisualState& state,
+                       float w, float h, float dt, int palette);
     void drawCurveSpectrum(SDL_Renderer* r, SDL_FRect plot,
                            const std::array<float, kMaxBands>& values,
                            const std::array<float, kMaxBands>& peaks,

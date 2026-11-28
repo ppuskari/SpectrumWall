@@ -239,7 +239,7 @@ not saved as part of your display preferences.
 - **G** — cycle GPU glow Off / Soft / Vivid
 - **T** — toggle fading LED afterglow trails
 - **R** — toggle reflected light below the frequency bars
-- **P** — toggle bass-reactive drifting particles
+- **P** — toggle foreground audio spark particles (peak-triggered, bass-reactive) on all visualizer screens
 - **M** — toggle center-monitor stereo mirror (default on: bass from both channels meets at the middle)
 - **H** — toggle right portrait monitor frequency mirroring (default on; left portrait unchanged)
 - **V** — cycle LED → Fluid Lines → Hybrid visual styles without restarting capture
@@ -369,6 +369,27 @@ Example commands:
 .\\SpectrumWall.exe --bands 128 --palette 5 --visual hybrid --smoothing liquid
 .\\SpectrumWall.exe --visual led
 ```
+
+## Foreground audio sparks (P)
+
+The **P** key switches on a bounded pool of audio-reactive sparks, launched
+near the currently active spectral peaks. Unlike the original almost
+invisible background dots, these particles render **above the spectrum**
+and below Engineering Mode axes and the F1 help overlay. Sparks accelerate
+upward on bass hits, drift, and fade; silence stops new emissions. Per-screen
+particle pools are capped at 160 objects. A small status line on each
+visualizer screen shows **PARTICLES: ON/OFF** and the active spark count.
+
+The setting is written to `particles=1` or `particles=0` in
+`SpectrumWall.ini` on normal exit. It works with **LED, Fluid Lines and
+Hybrid** regardless of the palette, portrait mirroring or center bass
+mirroring. It will be reused in a forthcoming Fire mode.
+
+The proposed **continuous Fire visualizer** (heat-field, organic flame
+tongues, bass-driven flicker and peak embers with engineering axes preserved
+on every screen) is specified in
+[docs/FIRE_MODE_SPEC.md](docs/FIRE_MODE_SPEC.md). This document is a design;
+Fire is not yet a selectable rendering mode.
 
 ## Eye-candy release
 
