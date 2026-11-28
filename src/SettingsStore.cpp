@@ -103,7 +103,7 @@ SessionSettings readSessionSettings(const std::filesystem::path& filename,
         } else if (key == "palette") {
             setNumber(value, result.palette, 1, 8);
         } else if (key == "visual") {
-            setNumber(value, result.visual, 0, 2);
+            setNumber(value, result.visual, 0, 3);
         } else if (key == "smoothing") {
             setNumber(value, result.smoothing, 0, 2);
         } else if (key == "glow") {
@@ -124,6 +124,20 @@ SessionSettings readSessionSettings(const std::filesystem::path& filename,
             setBool(value, result.centerMirror);
         } else if (key == "right_portrait_mirror") {
             setBool(value, result.rightPortraitMirror);
+        } else if (key == "fire_palette") {
+            setNumber(value, result.fire_palette, 0, 2);
+        } else if (key == "fire_peaks") {
+            setNumber(value, result.fire_peaks, 0, 2);
+        } else if (key == "fire_lines") {
+            setBool(value, result.fire_lines);
+        } else if (key == "fire_meters") {
+            setBool(value, result.fire_meters);
+        } else if (key == "fire_speed") {
+            setNumber(value, result.fire_speed, 0, 2);
+        } else if (key == "fire_quality") {
+            setNumber(value, result.fire_quality, 0, 2);
+        } else if (key == "fire_fourth") {
+            setBool(value, result.fire_fourth);
         } else if (key == "retro3d") {
             setNumber(value, result.retro3d, 0, 3);
         } else if (key == "retro3d_beat") {
@@ -162,7 +176,7 @@ bool writeSessionSettings(const std::filesystem::path& filename,
                << "bands=" << std::clamp(settings.bands,
                                         std::size_t{64}, std::size_t{256}) << '\n'
                << "palette=" << std::clamp(settings.palette, 1, 8) << '\n'
-               << "visual=" << std::clamp(settings.visual, 0, 2) << '\n'
+               << "visual=" << std::clamp(settings.visual, 0, 3) << '\n'
                << "smoothing=" << std::clamp(settings.smoothing, 0, 2) << '\n'
                << "engineering=" << (settings.engineering ? 1 : 0) << '\n'
                << "stereo_balance=" << (settings.stereoBalance ? 1 : 0) << '\n'
@@ -173,6 +187,13 @@ bool writeSessionSettings(const std::filesystem::path& filename,
                << "particles=" << (settings.particles ? 1 : 0) << '\n'
                << "center_mirror=" << (settings.centerMirror ? 1 : 0) << '\n'
                << "right_portrait_mirror=" << (settings.rightPortraitMirror ? 1 : 0) << '\n'
+               << "fire_palette=" << std::clamp(settings.fire_palette, 0, 2) << '\n'
+               << "fire_peaks=" << std::clamp(settings.fire_peaks, 0, 2) << '\n'
+               << "fire_lines=" << (settings.fire_lines ? 1 : 0) << '\n'
+               << "fire_meters=" << (settings.fire_meters ? 1 : 0) << '\n'
+               << "fire_speed=" << std::clamp(settings.fire_speed, 0, 2) << '\n'
+               << "fire_quality=" << std::clamp(settings.fire_quality, 0, 2) << '\n'
+               << "fire_fourth=" << (settings.fire_fourth ? 1 : 0) << '\n'
                << "retro3d=" << std::clamp(settings.retro3d, 0, 3) << '\n'
                << "retro3d_beat=" << (settings.retro3dBeat ? 1 : 0) << '\n'
                << "retro3d_size=" << std::clamp(settings.retro3dSize, 0, 2) << '\n'

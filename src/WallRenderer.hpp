@@ -2,6 +2,8 @@
 #include "SpectrumAnalyzer.hpp"
 #include "Retro3D.hpp"
 #include "RetroAssets.hpp"
+#include "FireHeat.hpp"
+#include "FireAccents.hpp"
 #include <filesystem>
 #include <SDL3/SDL.h>
 #include <algorithm>
@@ -12,12 +14,13 @@
 
 namespace spectrum {
 enum class ScreenRole { Center, Left, Right, Waterfall };
-enum class SpectrumStyle { Led = 0, Lines = 1, Hybrid = 2 };
+enum class SpectrumStyle { Led = 0, Lines = 1, Hybrid = 2, Fire = 3 };
 inline const char* spectrumStyleName(SpectrumStyle style) {
     switch (style) {
     case SpectrumStyle::Led: return "LED";
     case SpectrumStyle::Lines: return "FLUID LINES";
     case SpectrumStyle::Hybrid: return "HYBRID";
+    case SpectrumStyle::Fire: return "FIRE";
     }
     return "LED";
 }
@@ -27,6 +30,12 @@ struct AudioSpark {
     float vx=0.0f, vy=0.0f; // normalized units per second
     float age=0.0f, life=1.0f, size=3.0f, heat=0.5f, frequency=0.5f;
     bool right=false;
+};
+
+struct FireLayer {
+    FireHeatField cpu{};
+    FirePeakTracker accents{};
+    SDL_Texture* texture = nullptr;
 };
 
 struct ScreenWindow {
@@ -39,6 +48,7 @@ struct ScreenWindow {
     int glowHeight = 0;
     bool glowUnsupported = false;
     std::vector<AudioSpark> sparks{};
+    FireLayer leftFire{}, rightFire{};
     float sparkBudget=0.0f;
     std::uint32_t sparkRandomState=0x19d04b7du;
 };
@@ -64,10 +74,31 @@ public:
     void toggleParticles() { particlesEnabled_ = !particlesEnabled_; }
     void cycleSpectrumStyle() {
         spectrumStyle_ = static_cast<SpectrumStyle>(
-            (static_cast<int>(spectrumStyle_) + 1) % 3);
+            (static_cast<int>(spectrumStyle_) + 1) % 4);
     }
     void setSpectrumStyle(SpectrumStyle style) { spectrumStyle_ = style; }
     SpectrumStyle spectrumStyle() const { return spectrumStyle_; }
+    void cycleFirePalette() { firePalette_=(firePalette_+1)%3; }
+    void setFirePalette(int value) { firePalette_=std::clamp(value,0,2); }
+    int firePalette() const { return firePalette_; }
+    void cycleFirePeaks() { firePeaks_=(firePeaks_+1)%3; }
+    void setFirePeaks(int value) { firePeaks_=std::clamp(value,0,2); }
+    int firePeaks() const { return firePeaks_; }
+    void toggleFireLines() { fireLines_=!fireLines_; }
+    void setFireLines(bool value) { fireLines_=value; }
+    bool fireLines() const { return fireLines_; }
+    void toggleFireMeters() { fireMeters_=!fireMeters_; }
+    void setFireMeters(bool value) { fireMeters_=value; }
+    bool fireMeters() const { return fireMeters_; }
+    void cycleFireSpeed() { fireSpeed_=(fireSpeed_+1)%3; }
+    void setFireSpeed(int value) { fireSpeed_=std::clamp(value,0,2); }
+    int fireSpeed() const { return fireSpeed_; }
+    void cycleFireQuality() { fireQuality_=(fireQuality_+1)%3; }
+    void setFireQuality(int value) { fireQuality_=std::clamp(value,0,2); }
+    int fireQuality() const { return fireQuality_; }
+    void toggleFireFourth() { fireFourth_=!fireFourth_; }
+    void setFireFourth(bool value) { fireFourth_=value; }
+    bool fireFourth() const { return fireFourth_; }
     void toggleCenterMirror() { centerMirror_ = !centerMirror_; }
     bool centerMirrored() const { return centerMirror_; }
     void setCenterMirror(bool enabled) { centerMirror_ = enabled; }
@@ -109,6 +140,16 @@ private:
                     SmoothingMode smoothing,float dt);
     void drawShortcutHelp(const ScreenWindow& screen, float width, float height);
     void drawRetro3D(SDL_Renderer* r,float width,float height);
+    void drawFirePane(ScreenWindow& screen, FireLayer& layer,
+                      SDL_FRect plot,
+                      const std::array<float,kMaxBands>& values,
+                      std::size_t bands,bool mirror,float bassPulse,float dt);
+    void drawFirePilotMeter(SDL_Renderer* renderer,SDL_FRect plot,
+                            float smoothedRms,bool mirror);
+    void drawFireAccents(ScreenWindow& screen, FireLayer& layer,
+                         SDL_FRect plot,
+                         const std::array<float,kMaxBands>& values,
+                         std::size_t bands,bool mirror,float dt);
     void drawEngineeringOverlay(const ScreenWindow& screen,
                                 const VisualState& state, float w, float h);
     void drawStereoBalance(SDL_Renderer* renderer, float w, float h,
@@ -139,10 +180,10 @@ private:
                             const std::array<float, kMaxBands>& trails,
                             std::size_t bands, int palette, bool right,
                             bool mirror = false);
-    void drawPortrait(SDL_Renderer* r, float w, float h,
-                      const VisualState& state, bool left, int theme);
-    void drawCenter(SDL_Renderer* r, float w, float h,
-                    const VisualState& state, int theme);
+    void drawPortrait(ScreenWindow& screen, float w, float h,
+                      const VisualState& state, bool left, int theme,float dt);
+    void drawCenter(ScreenWindow& screen, float w, float h,
+                    const VisualState& state, int theme,float dt);
     void drawWaterfall(SDL_Renderer* r, float w, float h,
                        std::size_t bands, int theme);
     void drawSpectrum(SDL_Renderer* r, SDL_FRect rect,
@@ -167,6 +208,13 @@ private:
     bool centerMirror_ = true;
     bool rightPortraitMirror_ = true;
     SpectrumStyle spectrumStyle_ = SpectrumStyle::Lines;
+    int firePalette_ = 0; // 0 classic / 1 blue gas / 2 plasma
+    int firePeaks_ = 0; // 0 off / 1 flashes / 2 hold
+    bool fireLines_ = false;
+    bool fireMeters_ = false; // purely decorative pilot flames; dBFS bars untouched
+    int fireSpeed_ = 1; // slow/normal/fast
+    int fireQuality_ = 2; // eco/balanced/high (default unchanged)
+    bool fireFourth_ = false; // optional fourth monitor flame stereo view
     bool engineeringEnabled_ = false;
     bool stereoBalanceEnabled_ = false;
     SDL_WindowID helpWindowId_ = 0;

@@ -37,6 +37,13 @@ struct Options {
     bool particles = true;
     bool centerMirror = true;
     bool rightPortraitMirror = true;
+    int firePalette = 0;
+    int firePeaks = 0;
+    bool fireLines = false;
+    bool fireMeters = false;
+    int fireSpeed = 1;
+    int fireQuality = 2;
+    bool fireFourth = false;
     Retro3DMode retro3d = Retro3DMode::Off;
     bool retro3dBeat = true;
     int retro3dSize = 1;
@@ -67,6 +74,44 @@ Options parse(int argc, char** argv, Options options) {
         else if (flag == "--no-engineering") options.engineering = false;
         else if (flag == "--stereo-balance") options.balance = true;
         else if (flag == "--no-stereo-balance") options.balance = false;
+        else if (flag == "--fire-meters") options.fireMeters = true;
+        else if (flag == "--no-fire-meters") options.fireMeters = false;
+        else if (flag == "--fire-lines") options.fireLines = true;
+        else if (flag == "--no-fire-lines") options.fireLines = false;
+        else if (flag == "--fire-fourth") options.fireFourth = true;
+        else if (flag == "--no-fire-fourth") options.fireFourth = false;
+        else if (flag == "--fire-palette" && i + 1 < argc) {
+            const std::string choice=argv[++i];
+            if (choice=="classic") options.firePalette=0;
+            else if(choice=="blue") options.firePalette=1;
+            else if(choice=="plasma") options.firePalette=2;
+            else { std::fprintf(stderr,"Invalid --fire-palette '%s'\n",
+                                choice.c_str()); options.valid=false; }
+        }
+        else if (flag == "--fire-peaks" && i + 1 < argc) {
+            const std::string choice=argv[++i];
+            if(choice=="off") options.firePeaks=0;
+            else if(choice=="flash") options.firePeaks=1;
+            else if(choice=="hold") options.firePeaks=2;
+            else { std::fprintf(stderr,"Invalid --fire-peaks '%s'\n",
+                                choice.c_str()); options.valid=false; }
+        }
+        else if (flag == "--fire-speed" && i + 1 < argc) {
+            const std::string choice=argv[++i];
+            if(choice=="slow") options.fireSpeed=0;
+            else if(choice=="normal") options.fireSpeed=1;
+            else if(choice=="fast") options.fireSpeed=2;
+            else { std::fprintf(stderr,"Invalid --fire-speed '%s'\n",
+                                choice.c_str()); options.valid=false; }
+        }
+        else if (flag == "--fire-quality" && i + 1 < argc) {
+            const std::string choice=argv[++i];
+            if(choice=="eco") options.fireQuality=0;
+            else if(choice=="balanced") options.fireQuality=1;
+            else if(choice=="high") options.fireQuality=2;
+            else { std::fprintf(stderr,"Invalid --fire-quality '%s'\n",
+                                choice.c_str()); options.valid=false; }
+        }
         else if (flag == "--retro3d-beat") options.retro3dBeat = true;
         else if (flag == "--no-retro3d-beat") options.retro3dBeat = false;
         else if (flag == "--retro3d" && i + 1 < argc) {
@@ -120,8 +165,9 @@ Options parse(int argc, char** argv, Options options) {
             if (mode == "led") options.visual = SpectrumStyle::Led;
             else if (mode == "lines") options.visual = SpectrumStyle::Lines;
             else if (mode == "hybrid") options.visual = SpectrumStyle::Hybrid;
+            else if (mode == "fire") options.visual = SpectrumStyle::Fire;
             else {
-                std::fprintf(stderr, "Unknown --visual '%s' (led/lines/hybrid).\n",
+                std::fprintf(stderr, "Unknown --visual '%s' (led/lines/hybrid/fire).\n",
                              mode.c_str());
                 options.valid = false;
             }
@@ -160,15 +206,21 @@ Options parse(int argc, char** argv, Options options) {
             std::puts("SpectrumWall [--source TEXT] [--loopback] [--demo]"
                       " [--fourth] [--windowed] [--list-devices] [--bands 64..256]"
                       " [--palette 1..8] [--smoothing fast|balanced|liquid]"
-                      " [--visual led|lines|hybrid] [--engineering] [--stereo-balance]"
+                      " [--visual led|lines|hybrid|fire] [--engineering] [--stereo-balance]"
                       " [--retro3d off|baby|can|both] [--retro3d-size small|medium|large]"
                       " [--retro3d-beat] [--no-retro3d-beat]"
+                      " [--fire-palette classic|blue|plasma]"
+                      " [--fire-peaks off|flash|hold] [--fire-lines] [--fire-meters]"
+                      " [--fire-speed slow|normal|fast]"
+                      " [--fire-quality eco|balanced|high] [--fire-fourth]"
                       " [--defaults] [--no-save]");
             std::puts("Keys: Esc/Q quit; N next source; L toggle input/loopback;"
                       " D demo; 1..8/C palette; S smoothing; F frequency soften;"
-                      " G glow; T trails; R reflections; P particles; V visual style; M center mirror;"
+                      " G glow; T trails; R reflections; P particles; V visual (incl Fire); M center mirror;"
                       " H right portrait mirror; E engineering axes; J stereo balance;"
                       " [/] bands; B presets; K 3D model; U beat response; I 3D size;"
+                      " X fire palette; Y fire tips; ; fire lines; Z fire speed;"
+                      " O fire quality; W fourth fire; A pilot meters;"
                       " F1 / right click shortcut help; config auto-saves on exit");
             options.list = true;
         }
@@ -225,6 +277,13 @@ int main(int argc, char** argv) {
         initial.particles = saved.particles;
         initial.centerMirror = saved.centerMirror;
         initial.rightPortraitMirror = saved.rightPortraitMirror;
+        initial.firePalette = saved.fire_palette;
+        initial.firePeaks = saved.fire_peaks;
+        initial.fireLines = saved.fire_lines;
+        initial.fireMeters = saved.fire_meters;
+        initial.fireSpeed = saved.fire_speed;
+        initial.fireQuality = saved.fire_quality;
+        initial.fireFourth = saved.fire_fourth;
         initial.retro3d = static_cast<Retro3DMode>(saved.retro3d);
         initial.retro3dBeat = saved.retro3dBeat;
         initial.retro3dSize = saved.retro3dSize;
@@ -267,7 +326,7 @@ int main(int argc, char** argv) {
             std::printf("SpectrumWall: %zu active screens. "
                         "ESC/Q quit | N next audio | L loopback | D demo | 1-8 palettes |"
                         " S smoothing | F soften | G glow | T trails | R reflections |"
-                        " P particles | V visual | M center mirror | H right mirror |"
+                        " P particles | V visual (+Fire) | M center mirror | H right mirror |"
                         " E engineering | J balance | K 3D | U beat | I size | F1 help | [/] bands | B presets\n",
                         wall.screenCount());
             wall.setSpectrumStyle(options.visual);
@@ -279,6 +338,13 @@ int main(int argc, char** argv) {
             wall.setParticles(options.particles);
             wall.setCenterMirror(options.centerMirror);
             wall.setRightPortraitMirror(options.rightPortraitMirror);
+            wall.setFirePalette(options.firePalette);
+            wall.setFirePeaks(options.firePeaks);
+            wall.setFireLines(options.fireLines);
+            wall.setFireMeters(options.fireMeters);
+            wall.setFireSpeed(options.fireSpeed);
+            wall.setFireQuality(options.fireQuality);
+            wall.setFireFourth(options.fireFourth);
             wall.setRetro3DMode(options.retro3d);
             wall.setRetro3DBeat(options.retro3dBeat);
             wall.setRetro3DSize(options.retro3dSize);
@@ -411,6 +477,41 @@ int main(int argc, char** argv) {
                         std::printf("\nSpectrum visualization: %s\n",
                                     spectrumStyleName(wall.spectrumStyle()));
                         break;
+                    case SDLK_X:
+                        wall.cycleFirePalette();
+                        std::printf("\nFire palette: %s\n",
+                                    firePaletteName(wall.firePalette()));
+                        break;
+                    case SDLK_Y:
+                        wall.cycleFirePeaks();
+                        std::printf("\nFire flame tips: %s\n",
+                                    firePeakModeName(wall.firePeaks()));
+                        break;
+                    case SDLK_SEMICOLON:
+                        wall.toggleFireLines();
+                        std::printf("\nFire ridge line: %s\n",
+                                    wall.fireLines()?"ON":"OFF");
+                        break;
+                    case SDLK_Z:
+                        wall.cycleFireSpeed();
+                        std::printf("\nFire animation speed: %s\n",
+                                    fireSpeedName(wall.fireSpeed()));
+                        break;
+                    case SDLK_O:
+                        wall.cycleFireQuality();
+                        std::printf("\nFire render quality: %s\n",
+                                    fireQualityName(wall.fireQuality()));
+                        break;
+                    case SDLK_A:
+                        wall.toggleFireMeters();
+                        std::printf("\nFire pilot meters: %s\n",
+                                    wall.fireMeters()?"ON":"OFF");
+                        break;
+                    case SDLK_W:
+                        wall.toggleFireFourth();
+                        std::printf("\nFourth monitor Fire stereo view: %s\n",
+                                    wall.fireFourth()?"ON":"OFF");
+                        break;
                     case SDLK_M:
                         wall.toggleCenterMirror();
                         std::printf("\nCenter stereo bass-inward mirror: %s\n",
@@ -515,6 +616,13 @@ int main(int argc, char** argv) {
                 finalSettings.particles = wall.particlesEnabled();
                 finalSettings.centerMirror = wall.centerMirrored();
                 finalSettings.rightPortraitMirror = wall.rightPortraitMirrored();
+                finalSettings.fire_palette = wall.firePalette();
+                finalSettings.fire_peaks = wall.firePeaks();
+                finalSettings.fire_lines = wall.fireLines();
+                finalSettings.fire_meters = wall.fireMeters();
+                finalSettings.fire_speed = wall.fireSpeed();
+                finalSettings.fire_quality = wall.fireQuality();
+                finalSettings.fire_fourth = wall.fireFourth();
                 finalSettings.retro3d = static_cast<int>(wall.retro3dMode());
                 finalSettings.retro3dBeat = wall.retro3dBeatReactive();
                 finalSettings.retro3dSize = wall.retro3dSize();

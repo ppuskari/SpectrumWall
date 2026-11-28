@@ -1,8 +1,65 @@
 # SpectrumWall — Fire mode implementation design (proposal)
 
-Status: **design only**. The existing LED / Fluid Lines / Hybrid modes,
-WASAPI capture, 4096-point stereo FFT, dBFS scales and instrumentation are
-unchanged by this specification.
+Status: **first Fire mode implemented** on
+`feature/fire-heatfield-20261127`. The existing LED / Fluid Lines / Hybrid
+modes, WASAPI capture, 4096-point stereo FFT, calibrated dBFS scales and
+instrumentation are unchanged. This file retains implementation targets
+and future refinement opportunities, rather than claiming every idea
+below is already implemented.
+
+## Implemented first-pass behavior
+
+- `V` now cycles **LED → Lines → Hybrid → Fire**.
+- `--visual fire` is supported; `visual=3` saves/restores safely.
+- `src/FireHeat.hpp` holds a deterministic fixed-30 Hz, stereo-isolated
+  heat simulation with a maximum **320 × 192** pixel field per pane.
+  Upward advection, lateral turbulence, smoothed adjacent FFT envelopes,
+  amplitude gating and red→white-hot palette create continuous tongues.
+- `src/WallFire.cpp` uploads a streaming RGBA texture only when thermal
+  state changes, uses linear sampling, and draws an optional soft halo.
+  Fire does not reuse LED segments, peak-hold traces, curve glow or bar
+  reflections.
+- All three usual displays keep their independent spectrum sources and
+  frequency orientation; center L/R halves remain separate. The optional
+  fourth waterfall is unchanged.
+- Foreground `P` particles are still optional and emit as warm embers
+  while Fire is active. The **E** engineering layer, **J** balance gauge,
+  spectrum mouse probes, calibrated lower level meters, and F1 popup
+  remain above the fire field.
+- No traditional peak hold lines are drawn in Fire. Waveforms and
+  calibrated lower meters below the flame plots are retained.
+
+**Implemented after first hardware feedback:** three selectable color
+palettes, optional short and held animated tip sprites, flame-ridge
+lines, configurable thermal speed/texture quality, a decorative pilot
+flame backing for calibrated RMS/peak meters, and an optional fourth
+monitor stereo Fire view with engineering probes.
+
+**Not implemented by design:** a compute-shader/full-fluid solver or
+a separate dedicated flame-waterfall visualization. The low-res heat
+simulation and independently optional fourth stereo display meet the
+current visual/performance goals without requiring another graphics API.
+
+## New live controls and persistence
+
+| Key | Fire-only operation | Default |
+|---|---|---|
+| X | Classic / Blue Gas / Plasma palette | Classic |
+| Y | Peak-tip Off / Flash / Hold | Off |
+| ; | Continuous fire ridge overlay | Off |
+| Z | Slow / Normal / Fast thermal animation | Normal |
+| O | Eco / Balanced / High texture quality | High |
+| A | Decorative pilot flames beneath dBFS meters | Off |
+| W | Fourth screen Waterfall / stereo Fire | Waterfall |
+
+The corresponding `SpectrumWall.ini` keys are `fire_palette=0..2`,
+`fire_peaks=0..2`, `fire_lines=0|1`, `fire_speed=0..2`,
+`fire_quality=0..2`, `fire_meters=0|1`, and
+`fire_fourth=0|1`. `P` foreground particles, `E` engineering,
+`J` center bias, and the main `V` visual-style cycle are unchanged.
+The fourth Fire screen reuses the center layout's exact independent
+L/R pane positions and measurement overlay, while its default
+waterfall behavior remains unchanged.
 
 ## Aesthetic and target
 
@@ -135,6 +192,14 @@ brightness, silence floor, bass impulse coupling, spark density and
 engineering-axis readability against the live optical IIgs MOD stream.
 Collect FPS and GPU load across 3 screens and run an overnight soak.
 
-**F4 — Optional refinements only after visual feedback:** Peak tip hold,
-thin line overlays, blue flame / plasma palettes, speed/quality controls,
-optional pilot-flame meters (but retain calibrated dBFS readouts).
+**F4 — Implemented optional refinements:** Peak flash/hold sprites,
+thin ridge overlay, Classic/Blue Gas/Plasma palettes, Slow/Normal/Fast
+animation speed, Eco/Balanced/High thermal texture quality, optional
+decorative pilot-flame meters with calibrated dBFS instruments intact,
+and optional fourth-screen Fire view with engineering overlays.
+
+**Next hardware validation:** compare palette colors, held/flash tips,
+line and pilot-meter toggles, speed presets, quality/FPS tradeoffs,
+fourth-screen enable/disable, and simultaneous particles + engineering
+on live IIgs/a2fpga optical MOD audio. Fire options default to the
+original first-pass appearance for safe A/B testing.

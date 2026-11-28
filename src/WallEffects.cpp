@@ -59,7 +59,9 @@ void WallRenderer::drawParticles(ScreenWindow& screen,
                                  float height,float dt,int palette) {
     // Fire/Hybrid/LED/Lines share this independently swappable particle pass.
     // Render AFTER the spectrum, BEFORE engineering legends and help.
-    if (!particlesEnabled_ || screen.role==ScreenRole::Waterfall) {
+    if (!particlesEnabled_ || 
+        (screen.role==ScreenRole::Waterfall &&
+        !(spectrumStyle_==SpectrumStyle::Fire && fireFourth_))) {
         screen.sparks.clear();
         screen.sparkBudget=0.0f;
         return;
@@ -76,7 +78,9 @@ void WallRenderer::drawParticles(ScreenWindow& screen,
             return p.age>=p.life || p.y < -0.08f || p.x < -0.1f || p.x>1.1f;
         }),sparks.end());
 
-    const bool center=screen.role==ScreenRole::Center;
+    const bool center=screen.role==ScreenRole::Center ||
+        (screen.role==ScreenRole::Waterfall &&
+         spectrumStyle_==SpectrumStyle::Fire && fireFourth_);
     const bool rightPortrait=screen.role==ScreenRole::Right;
     const float meanL=[&]() {
         float sum=0;
@@ -145,8 +149,12 @@ void WallRenderer::drawParticles(ScreenWindow& screen,
     for(const auto& p:sparks){
         const float alpha=sparkFade(p.age,p.life);
         if(alpha<0.012f)continue;
-        const Rgb tint=paletteRgb(p.frequency,p.heat,
-                                  std::min(1.0f,p.heat+0.25f),palette,p.right);
+        const auto fireTint=FireHeatField::fireColor(
+            std::clamp(0.62f+p.heat*0.36f,0.0f,1.0f),firePalette_);
+        const Rgb tint=spectrumStyle_==SpectrumStyle::Fire
+            ? Rgb{fireTint[0],fireTint[1],fireTint[2]}
+            : paletteRgb(p.frequency,p.heat,
+                         std::min(1.0f,p.heat+0.25f),palette,p.right);
         const float x=p.x*width, y=p.y*height;
         const float size=p.size*(0.78f+0.30f*p.heat);
         // Soft halo, chromatic ring, then a clearly visible hot ember.
@@ -164,7 +172,10 @@ void WallRenderer::drawParticles(ScreenWindow& screen,
 
 void WallRenderer::drawBloom(ScreenWindow& screen, float width, float height,
                              const VisualState& state, int palette) {
+    // The Fire texture handles its own broad, soft glow. Don't leave
+    // old LED bars or Fluid Lines ghosting behind the heat field.
     if (glowMode_ == 0 || screen.role == ScreenRole::Waterfall ||
+        spectrumStyle_ == SpectrumStyle::Fire ||
         screen.glowUnsupported) return;
 
     SDL_Renderer* renderer = screen.renderer;

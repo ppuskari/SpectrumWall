@@ -24,6 +24,7 @@ add_executable(SpectrumWall
     src/WallRenderer.cpp
     src/WallEffects.cpp
     src/WallLines.cpp
+    src/WallFire.cpp
     src/EngineeringOverlay.cpp
     src/ShortcutHelp.cpp
     src/Retro3DRenderer.cpp

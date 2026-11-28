@@ -34,7 +34,7 @@ Depending on your CMake/vcpkg generator, the executable may be under `build\src\
 - `--demo`: use synthetic stereo audio for visual testing.
 - `--fourth`: enable the optional second horizontal display if one exists.
 - `--windowed`: open movable bordered windows rather than borderless screen-filling displays.
-- `--visual led|lines|hybrid`: choose LED segments, smooth curves, or a layered combination (default `lines`).
+- `--visual led|lines|hybrid|fire`: choose segmented LEDs, fluid curves, Hybrid, or continuous classic Fire (default `lines`).
 - `--engineering`: enable engineering dBFS/frequency-axis legends and exact FFT bucket mouse probes at startup.
 - `--stereo-balance`: enable the independent center-monitor L/R RMS bias meter at startup.
 - `--palette N`: choose color scheme **1–8** (default 4, Prism Rainbow).
@@ -242,7 +242,7 @@ not saved as part of your display preferences.
 - **P** — toggle foreground audio spark particles (peak-triggered, bass-reactive) on all visualizer screens
 - **M** — toggle center-monitor stereo mirror (default on: bass from both channels meets at the middle)
 - **H** — toggle right portrait monitor frequency mirroring (default on; left portrait unchanged)
-- **V** — cycle LED → Fluid Lines → Hybrid visual styles without restarting capture
+- **V** — cycle LED → Fluid Lines → Hybrid → Fire without restarting capture
 - **E** — toggle Engineering Mode axes and live frequency/dBFS bucket probes
 - **J** — toggle the center stereo balance gauge (separate from Engineering Mode)
 - **[ / ]** — decrease / increase active spectrum bars by 16, clamped to 64–256
@@ -370,6 +370,96 @@ Example commands:
 .\\SpectrumWall.exe --visual led
 ```
 
+## Classic Fire mode (V or --visual fire)
+
+Fire is the **fourth visual mode**. It replaces the segmented LED bars and
+peak-hold curves with a continuously flowing, interpolated thermal field
+colored dark red, ember orange, yellow, and white-hot. Bass surges increase
+flame height and thickness; higher bands create finer flickering tongues.
+The fire cools and fades after the input becomes silent.
+
+The heat field runs at a bounded **30 Hz** with up to two updates per display
+frame, independently for each stereo channel. Each pane uses a small GPU
+texture (up to **320 × 192**) with bilinear scaling; it does not allocate
+new textures per frame. This is not a computationally expensive 3D fluid
+simulation.
+
+- **Left portrait**: left channel fire; **right portrait**: right channel
+  fire, respecting H mirroring.
+- **Center**: left/right independent flames; M still brings the bass
+  frequencies inward from the two sides.
+- **P**: peak-launched foreground particles can be switched on or off.
+  In Fire mode they appear in warm ember colors. Particle toggle and count
+  are independent of the thermal-field simulation.
+- **E**: calibrated dBFS and frequency engineering scales, hover probes,
+  center lower RMS/sample-peak meters and channel balance indicators remain.
+- **K/U/I**: optional local 3D models continue to render as before.
+- The optional **fourth waterfall** remains unchanged by default.
+  Press **W** in Fire mode to switch it to a stereo Fire view, with
+  calibrated engineering probes and lower meters; W toggles it back.
+- **X** cycles three independently colored Fire palettes: Classic,
+  Blue Gas (dark blue/cyan/white), and Plasma (purple/pink/orange).
+  These palettes also color the particles when Fire is active.
+- **Y** cycles flame-tip sprites OFF → FLASH → HOLD. FLASH creates
+  brief hot fire tips following rising FFT amplitudes; HOLD keeps them
+  longer before controlled decay. Neither changes the actual RMS/peak
+  meter values.
+- **; (semicolon)** independently enables a fine continuous flame-ridge
+  line (default OFF).
+- **Z** cycles thermal animation speed SLOW → NORMAL → FAST without
+  affecting audio capture or FFT analysis.
+- **O** cycles heat texture quality ECO → BALANCED → HIGH. HIGH is the
+  original Fire implementation, with a maximum 320×192 thermal texture
+  per pane; lower settings reduce CPU and GPU upload work.
+- **A** toggles optional flickering pilot flames **behind** the lower
+  calibrated RMS/peak meters; the original instruments remain drawn
+  above them and keep their exact dBFS mapping.
+
+Launch Fire and particles using your previous saved settings:
+
+```powershell
+.\\SpectrumWall.exe --visual fire --engineering
+```
+
+Press **P** if your saved configuration had disabled particles, then **V**
+to compare Fire against LED / Lines / Hybrid. The selected style is saved
+as `visual=3` to `SpectrumWall.ini` on normal exit. Existing INI files
+with `visual=0`, `1`, or `2` remain compatible.
+
+The new options remain **OFF or classic by default**, preserving the
+first Fire test appearance until you explicitly enable them:
+
+```ini
+fire_palette=0
+fire_peaks=0
+fire_lines=0
+fire_meters=0
+fire_speed=1
+fire_quality=2
+fire_fourth=0
+```
+
+Launch directly into an alternative configuration:
+
+```powershell
+.\\SpectrumWall.exe --visual fire --fire-palette blue --fire-peaks flash --fire-lines --fire-meters --fire-speed fast --fire-quality balanced
+.\\SpectrumWall.exe --visual fire --fourth --fire-fourth --fire-palette plasma --fire-peaks hold
+```
+
+The right-click/F1 shortcut popup and top-left HUD show current Fire
+settings. `P` particles, `E` engineering axes, `G` glow and
+`J` stereo bias remain separate controls. If using an optional fourth
+Fire screen, its engineering readouts work just like the center screen.
+In default waterfall mode its old presentation is preserved.
+
+### Fire hardware verification
+
+Check silent cooling, L-only/R-only channel isolation, left and right
+frequency mirroring, particle ON/OFF, engineering probes, and stable FPS
+on the three-monitor RX 580 installation. See
+[docs/FIRE_MODE_SPEC.md](docs/FIRE_MODE_SPEC.md) for the design and
+acceptance targets.
+
 ## Foreground audio sparks (P)
 
 The **P** key switches on a bounded pool of audio-reactive sparks, launched
@@ -385,11 +475,9 @@ The setting is written to `particles=1` or `particles=0` in
 Hybrid** regardless of the palette, portrait mirroring or center bass
 mirroring. It will be reused in a forthcoming Fire mode.
 
-The proposed **continuous Fire visualizer** (heat-field, organic flame
-tongues, bass-driven flicker and peak embers with engineering axes preserved
-on every screen) is specified in
-[docs/FIRE_MODE_SPEC.md](docs/FIRE_MODE_SPEC.md). This document is a design;
-Fire is not yet a selectable rendering mode.
+The continuous Fire visualizer is now available as a separate V mode.
+[docs/FIRE_MODE_SPEC.md](docs/FIRE_MODE_SPEC.md) also records the
+implementation and longer-term optional enhancements.
 
 ## Eye-candy release
 

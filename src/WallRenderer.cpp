@@ -47,6 +47,8 @@ WallRenderer::~WallRenderer() {
     for(auto* texture:retroDancerTextures_)if(texture)SDL_DestroyTexture(texture);
     for(auto* texture:retroCanTextures_)if(texture)SDL_DestroyTexture(texture);
     for (auto& s : screens_) {
+        if (s.leftFire.texture) SDL_DestroyTexture(s.leftFire.texture);
+        if (s.rightFire.texture) SDL_DestroyTexture(s.rightFire.texture);
         if (s.glowTarget) SDL_DestroyTexture(s.glowTarget);
         if (s.renderer) SDL_DestroyRenderer(s.renderer);
         if (s.window) SDL_DestroyWindow(s.window);
@@ -237,52 +239,76 @@ void WallRenderer::drawLevel(SDL_Renderer* r, SDL_FRect plot, float rms,
          { 240, 240, 240, 150 });
 }
 
-void WallRenderer::drawPortrait(SDL_Renderer* r, float w, float h,
-                                const VisualState& state, bool left, int theme) {
+void WallRenderer::drawPortrait(ScreenWindow& screen, float w, float h,
+                                const VisualState& state, bool left, int theme,
+                                float dt) {
+    SDL_Renderer* r=screen.renderer;
     const float pad = std::max(12.0f, w * 0.027f);
     const auto& values = left ? state.left : state.right;
     const auto& peaks = left ? state.leftPeaks : state.rightPeaks;
     // Mirror only the right portrait's frequency axis; data remains unchanged.
     const bool mirror = portraitBandMirrored(left, rightPortraitMirror_);
-    drawSpectrumStyled(r, {pad, h * 0.06f, w - 2 * pad, h * 0.75f},
-                 values, peaks, left ? afterglowLeft_ : afterglowRight_,
-                 state.bandCount, theme, !left, mirror);
-    if (spectrumStyle_ != SpectrumStyle::Lines)
-    drawReflections(r, {pad, h * 0.06f, w - 2 * pad, h * 0.75f},
-                    values, state.bandCount, theme, !left, mirror);
+    const SDL_FRect plot={pad, h*0.06f, w-2*pad, h*0.75f};
+    if(spectrumStyle_==SpectrumStyle::Fire) {
+        drawFirePane(screen,screen.leftFire,plot,values,
+                     state.bandCount,mirror,state.bassPulse,dt);
+    } else {
+        drawSpectrumStyled(r,plot,values,peaks,
+                           left?afterglowLeft_:afterglowRight_,
+                           state.bandCount,theme,!left,mirror);
+        if(spectrumStyle_!=SpectrumStyle::Lines)
+            drawReflections(r,plot,values,state.bandCount,theme,
+                            !left,mirror);
+    }
     drawWave(r, {pad, h * 0.84f, w - 2 * pad, h * 0.07f},
              left ? state.waveLeft : state.waveRight,
              left ? SDL_Color{ 63, 226, 232, 255 } : SDL_Color{ 228, 112, 249, 255 });
+    if(spectrumStyle_==SpectrumStyle::Fire && fireMeters_)
+        drawFirePilotMeter(r,{pad,h*0.94f,w-2*pad,h*0.015f},
+                           left?state.vuLeft:state.vuRight,false);
     drawLevel(r, {pad, h * 0.94f, w - 2 * pad, h * 0.015f},
               left ? state.vuLeft : state.vuRight,
               left ? state.peakLeft : state.peakRight, theme);
 }
 
-void WallRenderer::drawCenter(SDL_Renderer* r, float w, float h,
-                              const VisualState& state, int theme) {
+void WallRenderer::drawCenter(ScreenWindow& screen, float w, float h,
+                              const VisualState& state, int theme,float dt) {
+    SDL_Renderer* r=screen.renderer;
     const float pad = std::max(20.0f, w * 0.026f);
     const float width = w - 2 * pad;
     const float half = width * 0.495f;
     // Mirrored left half: treble at outer edge, bass at center.
     // The right half remains in normal bass-to-treble order.
-    drawSpectrumStyled(r, {pad, h * 0.055f, half, h * 0.55f},
-                 state.left, state.leftPeaks, afterglowLeft_,
-                 state.bandCount, theme, false, centerMirror_);
-    if (spectrumStyle_ != SpectrumStyle::Lines)
-    drawReflections(r, {pad, h * 0.055f, half, h * 0.55f},
-                    state.left, state.bandCount, theme, false, centerMirror_);
-    drawSpectrumStyled(r, {pad + width * 0.505f, h * 0.055f, half, h * 0.55f},
-                 state.right, state.rightPeaks, afterglowRight_,
-                 state.bandCount, theme, true);
-    if (spectrumStyle_ != SpectrumStyle::Lines)
-    drawReflections(r, {pad + width * 0.505f, h * 0.055f, half, h * 0.55f},
-                    state.right, state.bandCount, theme, true);
+    const SDL_FRect leftPlot={pad,h*0.055f,half,h*0.55f};
+    const SDL_FRect rightPlot={pad+width*0.505f,h*0.055f,half,h*0.55f};
+    if(spectrumStyle_==SpectrumStyle::Fire) {
+        drawFirePane(screen,screen.leftFire,leftPlot,state.left,
+                     state.bandCount,centerMirror_,state.bassPulse,dt);
+        drawFirePane(screen,screen.rightFire,rightPlot,state.right,
+                     state.bandCount,false,state.bassPulse,dt);
+    } else {
+        drawSpectrumStyled(r,leftPlot,state.left,state.leftPeaks,
+                           afterglowLeft_,state.bandCount,theme,false,centerMirror_);
+        if(spectrumStyle_!=SpectrumStyle::Lines)
+            drawReflections(r,leftPlot,state.left,state.bandCount,
+                            theme,false,centerMirror_);
+        drawSpectrumStyled(r,rightPlot,state.right,state.rightPeaks,
+                           afterglowRight_,state.bandCount,theme,true);
+        if(spectrumStyle_!=SpectrumStyle::Lines)
+            drawReflections(r,rightPlot,state.right,state.bandCount,theme,true);
+    }
     line(r, w * 0.5f, h * 0.045f, w * 0.5f, h * 0.61f,
          { 40, 70, 88, 200 });
     drawWave(r, {pad, h * 0.65f, width, h * 0.115f}, state.waveLeft,
              { 60, 228, 245, 255 });
     drawWave(r, {pad, h * 0.77f, width, h * 0.115f}, state.waveRight,
              { 208, 113, 255, 255 });
+    if(spectrumStyle_==SpectrumStyle::Fire && fireMeters_) {
+        drawFirePilotMeter(r,{pad,h*0.927f,width*0.485f,h*0.025f},
+                           state.vuLeft,centerMirror_);
+        drawFirePilotMeter(r,{pad+width*0.515f,h*0.927f,
+                              width*0.485f,h*0.025f},state.vuRight,false);
+    }
     drawLevel(r, {pad, h * 0.927f, width * 0.485f, h * 0.025f},
               state.vuLeft, state.peakLeft, theme, centerMirror_);
     drawLevel(r, {pad + width * 0.515f, h * 0.927f, width * 0.485f, h * 0.025f},
@@ -335,10 +361,15 @@ void WallRenderer::drawScreen(ScreenWindow& screen, const VisualState& state,
     }
     drawBloom(screen, w, h, state, theme);
     switch (screen.role) {
-    case ScreenRole::Left: drawPortrait(r, w, h, state, true, theme); break;
-    case ScreenRole::Right: drawPortrait(r, w, h, state, false, theme); break;
-    case ScreenRole::Center: drawCenter(r, w, h, state, theme); break;
-    case ScreenRole::Waterfall: drawWaterfall(r, w, h, state.bandCount, theme); break;
+    case ScreenRole::Left: drawPortrait(screen,w,h,state,true,theme,dt); break;
+    case ScreenRole::Right: drawPortrait(screen,w,h,state,false,theme,dt); break;
+    case ScreenRole::Center: drawCenter(screen,w,h,state,theme,dt); break;
+    case ScreenRole::Waterfall:
+        if(spectrumStyle_==SpectrumStyle::Fire && fireFourth_)
+            drawCenter(screen,w,h,state,theme,dt);
+        else
+            drawWaterfall(r,w,h,state.bandCount,theme);
+        break;
     }
     // Foreground sparks remain visible over full-height LED/Hybrid bars.
     // Keep the measurement and keyboard layers above them.
@@ -347,7 +378,10 @@ void WallRenderer::drawScreen(ScreenWindow& screen, const VisualState& state,
         drawRetro3D(r, w, h);
     if (engineeringEnabled_)
         drawEngineeringOverlay(screen, state, w, h);
-    if (screen.role == ScreenRole::Center && stereoBalanceEnabled_)
+    if ((screen.role == ScreenRole::Center ||
+        (screen.role == ScreenRole::Waterfall &&
+         spectrumStyle_ == SpectrumStyle::Fire && fireFourth_)) &&
+        stereoBalanceEnabled_)
         drawStereoBalance(r, w, h, state);
 
     // Minimal hardware-accelerated OSD confirms live band changes in fullscreen.
@@ -368,6 +402,18 @@ void WallRenderer::drawScreen(ScreenWindow& screen, const VisualState& state,
     SDL_RenderDebugTextFormat(r,8.0f,54.0f,"PARTICLES: %s  SPARKS: %zu",
                               particlesEnabled_?"ON":"OFF",
                               screen.sparks.size());
+    if (spectrumStyle_ == SpectrumStyle::Fire) {
+        SDL_RenderDebugTextFormat(r,8.0f,65.0f,
+            "FIRE %s | TIPS %s | RIDGE %s",
+            firePaletteName(firePalette_),firePeakModeName(firePeaks_),
+            fireLines_?"ON":"OFF");
+        SDL_RenderDebugTextFormat(r,8.0f,76.0f,
+            "SPEED %s | QUALITY %s | 4TH FIRE %s",
+            fireSpeedName(fireSpeed_),fireQualityName(fireQuality_),
+            fireFourth_?"ON":"OFF");
+        SDL_RenderDebugTextFormat(r,8.0f,87.0f,
+            "PILOT METERS %s",fireMeters_?"ON":"OFF");
+    }
     SDL_SetRenderScale(r, 1.0f, 1.0f);
     // Context-help is intentionally the final UI layer, above engineering
     // rulers, stereo RMS gauges, and the persistent shortcut status line.
