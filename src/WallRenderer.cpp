@@ -315,7 +315,7 @@ void WallRenderer::drawWaterfall(SDL_Renderer* r, float w, float h,
 }
 
 void WallRenderer::drawScreen(ScreenWindow& screen, const VisualState& state,
-                              int theme, SmoothingMode smoothing) {
+                              int theme, SmoothingMode smoothing,float dt) {
     SDL_Renderer* r = screen.renderer;
     int width = 0, height = 0;
     if (!SDL_GetRenderOutputSize(r, &width, &height)) return;
@@ -333,7 +333,6 @@ void WallRenderer::drawScreen(ScreenWindow& screen, const VisualState& state,
         const float x = i * w / 19.0f;
         line(r, x, 0, x, h, { 20, 36, 49, 28 });
     }
-    drawParticles(r, w, h, state.bassPulse, theme);
     drawBloom(screen, w, h, state, theme);
     switch (screen.role) {
     case ScreenRole::Left: drawPortrait(r, w, h, state, true, theme); break;
@@ -341,6 +340,9 @@ void WallRenderer::drawScreen(ScreenWindow& screen, const VisualState& state,
     case ScreenRole::Center: drawCenter(r, w, h, state, theme); break;
     case ScreenRole::Waterfall: drawWaterfall(r, w, h, state.bandCount, theme); break;
     }
+    // Foreground sparks remain visible over full-height LED/Hybrid bars.
+    // Keep the measurement and keyboard layers above them.
+    drawParticles(screen,state,w,h,dt,theme);
     if (screen.role == ScreenRole::Center)
         drawRetro3D(r, w, h);
     if (engineeringEnabled_)
@@ -363,6 +365,9 @@ void WallRenderer::drawScreen(ScreenWindow& screen, const VisualState& state,
         SDL_RenderDebugTextFormat(r, 8.0f, 29.0f, "ENGINEERING: dBFS / LOG Hz");
     if (screen.role == ScreenRole::Center && stereoBalanceEnabled_)
         SDL_RenderDebugText(r, 8.0f, 40.0f, "STEREO RMS BALANCE: ON");
+    SDL_RenderDebugTextFormat(r,8.0f,54.0f,"PARTICLES: %s  SPARKS: %zu",
+                              particlesEnabled_?"ON":"OFF",
+                              screen.sparks.size());
     SDL_SetRenderScale(r, 1.0f, 1.0f);
     // Context-help is intentionally the final UI layer, above engineering
     // rulers, stereo RMS gauges, and the persistent shortcut status line.
@@ -407,6 +412,6 @@ void WallRenderer::draw(const VisualState& state, int theme, float dt,
     }
     retro3dDancePhase_ += elapsed*(4.9f+retro3dEnergy_*2.3f);
     retro3dLastPulse_=target;
-    for (auto& s : screens_) drawScreen(s, state, theme, smoothing);
+    for (auto& s : screens_) drawScreen(s, state, theme, smoothing, elapsed);
 }
 } // namespace spectrum
