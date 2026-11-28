@@ -145,8 +145,12 @@ void WallRenderer::drawParticles(ScreenWindow& screen,
     for(const auto& p:sparks){
         const float alpha=sparkFade(p.age,p.life);
         if(alpha<0.012f)continue;
-        const Rgb tint=paletteRgb(p.frequency,p.heat,
-                                  std::min(1.0f,p.heat+0.25f),palette,p.right);
+        const Rgb tint=spectrumStyle_==SpectrumStyle::Fire
+               ? Rgb{255,static_cast<Uint8>(
+                          std::clamp(116.0f+p.heat*124.0f,0.0f,255.0f)),
+                      static_cast<Uint8>(18.0f+p.heat*55.0f)}
+               : paletteRgb(p.frequency,p.heat,
+                            std::min(1.0f,p.heat+0.25f),palette,p.right);
         const float x=p.x*width, y=p.y*height;
         const float size=p.size*(0.78f+0.30f*p.heat);
         // Soft halo, chromatic ring, then a clearly visible hot ember.
@@ -164,7 +168,10 @@ void WallRenderer::drawParticles(ScreenWindow& screen,
 
 void WallRenderer::drawBloom(ScreenWindow& screen, float width, float height,
                              const VisualState& state, int palette) {
+    // The Fire texture handles its own broad, soft glow. Don't leave
+    // old LED bars or Fluid Lines ghosting behind the heat field.
     if (glowMode_ == 0 || screen.role == ScreenRole::Waterfall ||
+        spectrumStyle_ == SpectrumStyle::Fire ||
         screen.glowUnsupported) return;
 
     SDL_Renderer* renderer = screen.renderer;
