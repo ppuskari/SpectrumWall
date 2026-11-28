@@ -231,9 +231,13 @@ void drawLevelMeterEngineering(SDL_Renderer* renderer,
 void WallRenderer::drawEngineeringOverlay(const ScreenWindow& screen,
                                           const VisualState& state,
                                           float w, float h) {
-    if (!engineeringEnabled_ || screen.role == ScreenRole::Waterfall) return;
+    if (!engineeringEnabled_ ||
+        (screen.role == ScreenRole::Waterfall &&
+         !(spectrumStyle_ == SpectrumStyle::Fire && fireFourth_))) return;
     SDL_Renderer* r = screen.renderer;
-    if (screen.role == ScreenRole::Center) {
+    if (screen.role == ScreenRole::Center ||
+        (screen.role == ScreenRole::Waterfall &&
+         spectrumStyle_ == SpectrumStyle::Fire && fireFourth_)) {
         const float pad = std::max(20.0f, w * 0.026f);
         const float width = w - 2.0f * pad;
         const SDL_FRect left = {pad, h * 0.055f, width * 0.495f, h * 0.55f};
