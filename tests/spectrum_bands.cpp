@@ -7,6 +7,7 @@
 #include "SpectrumLayout.hpp"
 #include "VisualStyle.hpp"
 #include "ParticleMath.hpp"
+#include "FireHeat.hpp"
 #include <array>
 
 #include <cmath>
@@ -31,6 +32,56 @@ int main() {
         stereo[i * 2] = 0.6f * std::sin(2.0f * pi * 110.0f * t);
         stereo[i * 2 + 1] = 0.4f * std::sin(2.0f * pi * 880.0f * t);
     }
+
+    // Fire heat simulation: continuous unsegmented thermal pixels, channel
+    // separation, horizontal mirror, size bounds, opacity and silence decay.
+    FireHeatField leftFire, rightFire, mirroredFire;
+    leftFire.resize(96,72);
+    rightFire.resize(96,72);
+    mirroredFire.resize(96,72);
+    CHECK(leftFire.width==96 && leftFire.height==72);
+    CHECK(leftFire.heat.size()==96u*72u);
+    CHECK(leftFire.rgba.size()==96u*72u*4u);
+    CHECK(FireHeatField::fireColor(0.0f)[3]==0);
+    CHECK(FireHeatField::fireColor(0.9f)[0]>
+          FireHeatField::fireColor(0.2f)[0]);
+    CHECK(FireHeatField::fireColor(0.9f)[3]>200);
+
+    std::array<float,kMaxBands> fireSignal{};
+    fireSignal[0]=1.0f; fireSignal[1]=0.9f; fireSignal[2]=0.8f;
+    const std::array<float,kMaxBands> fireSilence{};
+    for(int tick=0;tick<18;++tick){
+        CHECK(leftFire.advance(fireSignal,128,false,0.40f,1.0f/30.0f));
+        CHECK(mirroredFire.advance(fireSignal,128,true,0.40f,1.0f/30.0f));
+        CHECK(rightFire.advance(fireSilence,128,false,0.0f,1.0f/30.0f));
+    }
+    float heatLeft=0.0f,heatRight=0.0f,mirrorLeft=0.0f,mirrorRight=0.0f;
+    for(int y=0;y<leftFire.height;++y)
+      for(int x=0;x<leftFire.width;++x){
+        const std::size_t i=static_cast<std::size_t>(y*leftFire.width+x);
+        if(x<leftFire.width/2){
+            heatLeft+=leftFire.heat[i];
+            mirrorLeft+=mirroredFire.heat[i];
+        }else{
+            heatRight+=leftFire.heat[i];
+            mirrorRight+=mirroredFire.heat[i];
+        }
+        CHECK(rightFire.heat[i]==0.0f);
+    }
+    CHECK(heatLeft>heatRight*5.0f);
+    CHECK(mirrorRight>mirrorLeft*5.0f);
+    CHECK(heatLeft>0.25f);
+    CHECK(!leftFire.advance(fireSignal,128,false,0.0f,0.0f));
+    // Quiet source must stop injecting new heat and cool naturally.
+    float preSilence=0.0f;
+    for(float h:leftFire.heat)preSilence+=h;
+    for(int tick=0;tick<90;++tick)
+        leftFire.advance(fireSilence,128,false,0.0f,1.0f/30.0f);
+    float postSilence=0.0f;
+    for(float h:leftFire.heat)postSilence+=h;
+    CHECK(postSilence<preSilence*0.03f);
+    leftFire.resize(8000,8000);
+    CHECK(leftFire.width==320 && leftFire.height==192);
 
     // Local-only OBJ asset loading: geometry, material colors, animated
     // frame selection, and texture paths are deliberately not committed.
@@ -298,7 +349,7 @@ int main() {
     SessionSettings settings;
     settings.bands = 192;
     settings.palette = 7;
-    settings.visual = 2;
+    settings.visual = 3;
     settings.smoothing = 2;
     settings.engineering = true;
     settings.stereoBalance = true;
@@ -318,7 +369,7 @@ int main() {
     auto restored = readSessionSettings(configPath, &loaded);
     CHECK(loaded);
     CHECK(restored.bands == 192 && restored.palette == 7);
-    CHECK(restored.visual == 2 && restored.smoothing == 2);
+    CHECK(restored.visual == 3 && restored.smoothing == 2);
     CHECK(restored.engineering && restored.stereoBalance);
     CHECK(!restored.spectralSoftening && restored.glow == 1);
     CHECK(!restored.trails && !restored.reflections && !restored.particles);
