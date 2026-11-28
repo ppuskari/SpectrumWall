@@ -160,6 +160,7 @@ void WallRenderer::drawSpectrumStyled(SDL_Renderer* r, SDL_FRect plot,
                                       const std::array<float, kMaxBands>& trails,
                                       std::size_t bands, int palette, bool right,
                                       bool mirror) {
+    if (spectrumStyle_ == SpectrumStyle::Fire) return;
     if (spectrumStyle_ != SpectrumStyle::Lines) {
         drawSpectrum(r, plot, values, peaks, trails, bands, palette,
                      right, mirror);
