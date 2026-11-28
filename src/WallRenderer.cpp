@@ -355,7 +355,12 @@ void WallRenderer::drawScreen(ScreenWindow& screen, const VisualState& state,
     case ScreenRole::Left: drawPortrait(screen,w,h,state,true,theme,dt); break;
     case ScreenRole::Right: drawPortrait(screen,w,h,state,false,theme,dt); break;
     case ScreenRole::Center: drawCenter(screen,w,h,state,theme,dt); break;
-    case ScreenRole::Waterfall: drawWaterfall(r, w, h, state.bandCount, theme); break;
+    case ScreenRole::Waterfall:
+        if(spectrumStyle_==SpectrumStyle::Fire && fireFourth_)
+            drawCenter(screen,w,h,state,theme,dt);
+        else
+            drawWaterfall(r,w,h,state.bandCount,theme);
+        break;
     }
     // Foreground sparks remain visible over full-height LED/Hybrid bars.
     // Keep the measurement and keyboard layers above them.
@@ -364,7 +369,10 @@ void WallRenderer::drawScreen(ScreenWindow& screen, const VisualState& state,
         drawRetro3D(r, w, h);
     if (engineeringEnabled_)
         drawEngineeringOverlay(screen, state, w, h);
-    if (screen.role == ScreenRole::Center && stereoBalanceEnabled_)
+    if ((screen.role == ScreenRole::Center ||
+        (screen.role == ScreenRole::Waterfall &&
+         spectrumStyle_ == SpectrumStyle::Fire && fireFourth_)) &&
+        stereoBalanceEnabled_)
         drawStereoBalance(r, w, h, state);
 
     // Minimal hardware-accelerated OSD confirms live band changes in fullscreen.
@@ -385,6 +393,16 @@ void WallRenderer::drawScreen(ScreenWindow& screen, const VisualState& state,
     SDL_RenderDebugTextFormat(r,8.0f,54.0f,"PARTICLES: %s  SPARKS: %zu",
                               particlesEnabled_?"ON":"OFF",
                               screen.sparks.size());
+    if (spectrumStyle_ == SpectrumStyle::Fire) {
+        SDL_RenderDebugTextFormat(r,8.0f,65.0f,
+            "FIRE %s | TIPS %s | RIDGE %s",
+            firePaletteName(firePalette_),firePeakModeName(firePeaks_),
+            fireLines_?"ON":"OFF");
+        SDL_RenderDebugTextFormat(r,8.0f,76.0f,
+            "SPEED %s | QUALITY %s | 4TH FIRE %s",
+            fireSpeedName(fireSpeed_),fireQualityName(fireQuality_),
+            fireFourth_?"ON":"OFF");
+    }
     SDL_SetRenderScale(r, 1.0f, 1.0f);
     // Context-help is intentionally the final UI layer, above engineering
     // rulers, stereo RMS gauges, and the persistent shortcut status line.
