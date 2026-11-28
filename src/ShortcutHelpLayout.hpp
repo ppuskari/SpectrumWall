@@ -11,7 +11,7 @@ struct ShortcutHelpRow {
 };
 
 // One authoritative list for the renderer and compact-menu paging.
-inline constexpr std::array<ShortcutHelpRow, 17> kVisualShortcuts {{
+inline constexpr std::array<ShortcutHelpRow, 18> kVisualShortcuts {{
     {"1-8",   "Choose color palette"},
     {"C",     "Next palette"},
     {"V",     "LED / Lines / Hybrid / Fire"},
@@ -27,6 +27,7 @@ inline constexpr std::array<ShortcutHelpRow, 17> kVisualShortcuts {{
     {"Z",     "Fire speed: 3 presets"},
     {"O",     "Fire quality: 3 presets"},
     {"W",     "Fourth monitor: Fire view"},
+    {"A",     "Fire pilot meters on/off"},
     {"[ / ]", "Band count -/+ 16"},
     {"B",     "Cycle band presets"}
 }};
