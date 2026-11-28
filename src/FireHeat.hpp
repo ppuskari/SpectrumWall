@@ -9,6 +9,15 @@
 
 namespace spectrum {
 
+inline const char* firePaletteName(int p) {
+    switch(p) {
+        case 0:return "CLASSIC";
+        case 1:return "BLUE GAS";
+        case 2:return "PLASMA";
+        default:return "CLASSIC";
+    }
+}
+
 // Each pane gets its own low-resolution thermal simulation; no inter-channel
 // mixing or dependency on the renderer's 60 Hz refresh cadence.
 struct FireHeatField {
@@ -46,12 +55,17 @@ struct FireHeatField {
         return std::clamp(values[lo]*(1.0f-mix)+values[hi]*mix, 0.0f, 1.0f);
     }
 
-    static std::array<std::uint8_t,4> fireColor(float value) {
+    static std::array<std::uint8_t,4> fireColor(float value,int palette=0) {
         value = std::clamp(value, 0.0f, 1.0f);
-        constexpr std::array<std::array<float,3>,6> knots {{
-            {{0,0,0}}, {{78,7,2}}, {{183,19,1}},
-            {{253,89,7}}, {{255,206,44}}, {{255,249,218}}
+        constexpr std::array<std::array<std::array<float,3>,6>,3> lut {{
+            {{{{0,0,0}}, {{78,7,2}}, {{183,19,1}},
+              {{253,89,7}}, {{255,206,44}}, {{255,249,218}}}},
+            {{{{0,0,0}}, {{5,20,75}}, {{11,62,185}},
+              {{27,150,250}}, {{115,225,255}}, {{241,252,255}}}},
+            {{{{0,0,0}}, {{66,0,70}}, {{172,10,117}},
+              {{244,46,140}}, {{255,123,64}}, {{255,243,204}}}}
         }};
+        const auto& knots=lut[std::clamp(palette,0,2)];
         const float segment = value*5.0f;
         const int lo = std::min(static_cast<int>(segment), 4);
         const float t = segment - static_cast<float>(lo);
@@ -68,7 +82,7 @@ struct FireHeatField {
     // Fixed 30 Hz update; at most two thermal steps per frame. Returns true
     // only when the RGBA texture needs uploading to the GPU.
     bool advance(const std::array<float,kMaxBands>& values,std::size_t count,
-                 bool mirror,float bassPulse,float dt) {
+                 bool mirror,float bassPulse,float dt,int palette=0) {
         if (width == 0 || height == 0 || count == 0) return false;
         constexpr float step = 1.0f/30.0f;
         accumulator = std::min(2.0f*step,accumulator+
@@ -82,7 +96,7 @@ struct FireHeatField {
         }
         if (changed) {
             for (std::size_t i=0;i<heat.size();++i) {
-                const auto color=fireColor(heat[i]);
+                const auto color=fireColor(heat[i],palette);
                 rgba[i*4+0]=color[0];
                 rgba[i*4+1]=color[1];
                 rgba[i*4+2]=color[2];
